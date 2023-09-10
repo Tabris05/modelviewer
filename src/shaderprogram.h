@@ -16,10 +16,12 @@ private:
 public:
 	ShaderProgram(const char* vertexFile, const char* fragmentFile);
 	~ShaderProgram();
-	operator GLuint() const;
 
 	void activate();
 	void deactivate();
+
+	template<typename T>
+	void setUniform(const char* uniform, T value);
 };
 
 #endif

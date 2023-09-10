@@ -16,8 +16,9 @@ private:
 	std::unordered_map<std::string, std::optional<Texture>> m_loadedTextures;
 	std::string m_directory;
 	glm::mat4 m_baseTransform;
-
 	aabb m_aabb;
+
+	GLuint m_texSlots = 0;
 
 	void processNode(aiNode* node, const aiScene* scene, glm::mat4 parentTransform = glm::mat4(1.0f));
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
@@ -26,7 +27,6 @@ private:
 public:
 	Model(std::string path);
 	void draw(ShaderProgram& shader, Camera& camera, glm::mat4 transformation = glm::mat4(1.0f));
-	void drawTextureless(ShaderProgram& shader, Camera& camera, glm::mat4 transformation = glm::mat4(1.0f));
 };
 
 #endif

@@ -72,12 +72,10 @@ Skybox::Skybox(std::string path, std::array<std::string, 6> faces) :
 }
 
 void Skybox::draw(ShaderProgram& shaderProgram, Camera& camera) {
-    glDepthFunc(GL_LEQUAL);
     shaderProgram.activate();
     m_vArr.bind();
 
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "camMatrix"), 1, GL_FALSE, glm::value_ptr(camera.getProjMatrix(45.0f, 0.1f, 100.0f) * glm::mat4(glm::mat3(camera.getViewMatrix()))));
+    shaderProgram.setUniform("camMatrix", camera.getProjMatrix(45.0f, 0.1f, 100.0f) * glm::mat4(glm::mat3(camera.getViewMatrix())));
     
     glDrawArrays(GL_TRIANGLES, 0, 36);
-    glDepthFunc(GL_LESS);
 }

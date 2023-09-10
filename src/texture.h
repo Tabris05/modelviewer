@@ -14,9 +14,10 @@ private:
 	GLid m_texID;
 	GLuint m_slot;
 	size_t* m_rc;
+
 public:
 	Texture();
-	Texture(const char* filename, GLuint slot, GLenum colorspace);
+	Texture(const char* filename, GLenum colorspace, GLuint slot);
 	Texture(const Texture& src) noexcept;
 	Texture(Texture&& src) noexcept;
 	~Texture();

@@ -16,35 +16,11 @@
     <Filter Include="Resource Files\shaders">
       <UniqueIdentifier>{3e844c0d-d2c2-46cc-997c-e61b0f83f40f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Dependencies">
+      <UniqueIdentifier>{63d18d33-9884-430b-98ef-333381e0f5db}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="lib\glad.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\stb.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\imgui\imgui.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\imgui\imgui_demo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\imgui\imgui_draw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\imgui\imgui_impl_glfw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\imgui\imgui_impl_opengl3.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\imgui\imgui_tables.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\imgui\imgui_widgets.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -66,9 +42,6 @@
     <ClCompile Include="src\model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\msaabuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\shaderprogram.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -84,30 +57,66 @@
     <ClCompile Include="src\vertexbuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\stb.c">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\glad.c">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui.cpp">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_demo.cpp">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_draw.cpp">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_impl_glfw.cpp">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_impl_opengl3.cpp">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_tables.cpp">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\Dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="src\screenquad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\postprocessing.frag">
+    <None Include="shaders\empty_fragment.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\postprocessing.vert">
+    <None Include="shaders\blinnphong_fragment.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\default.frag">
+    <None Include="shaders\model_vertex.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\default.vert">
+    <None Include="shaders\pbr_fragment.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\skybox.frag">
+    <None Include="shaders\postprocessing_fragment.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\skybox.vert">
+    <None Include="shaders\postprocessing_vertex.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\pbr.frag">
+    <None Include="shaders\skybox_fragment.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\pbr.vert">
+    <None Include="shaders\skybox_vertex.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="shaders\modeldepth_vertex.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
   </ItemGroup>
@@ -136,9 +145,6 @@
     <ClInclude Include="src\model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\msaabuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\shaderprogram.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -155,6 +161,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\vertexbuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\screenquad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

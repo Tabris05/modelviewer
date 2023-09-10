@@ -16,10 +16,6 @@ void Model::draw(ShaderProgram& shader, Camera& camera, glm::mat4 transformation
 	for (size_t i = 0; i < m_meshes.size(); i++) m_meshes[i].draw(shader, camera, transformation * m_baseTransform * m_transformations[i]);
 }
 
-void Model::drawTextureless(ShaderProgram& shader, Camera& camera, glm::mat4 transformation) {
-	for (size_t i = 0; i < m_meshes.size(); i++) m_meshes[i].drawTextureless(shader, camera, transformation * m_baseTransform * m_transformations[i]);
-}
-
 void Model::processNode(aiNode* node, const aiScene* scene, glm::mat4 parentTransform) {
 	glm::mat4 tmp = aiMat4ToGLM(&node->mTransformation);
 	glm::mat4 curTransform = parentTransform * tmp;
@@ -69,7 +65,6 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 }
 
 std::optional<Texture> Model::loadMaterialTexture(aiMaterial* mat, aiTextureType type) {
-	static GLuint slot = 2;
 	GLenum colorspace;
 	switch (type) {
 		case aiTextureType_DIFFUSE:
@@ -85,7 +80,7 @@ std::optional<Texture> Model::loadMaterialTexture(aiMaterial* mat, aiTextureType
 		std::string fullPath = m_directory + std::string(str.C_Str());
 		std::optional<Texture> maybeTex = m_loadedTextures[fullPath];
 		if (maybeTex)  return *maybeTex;
-		Texture result{ fullPath.c_str(), slot++, colorspace };
+		Texture result{ fullPath.c_str(), colorspace, m_texSlots++ };
 		m_loadedTextures[fullPath] = result;
 		return result;
 	}

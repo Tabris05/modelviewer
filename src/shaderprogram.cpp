@@ -1,5 +1,7 @@
 #include "shaderprogram.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <fstream>
 #include "dbg.h"
 
@@ -46,10 +48,6 @@ ShaderProgram::~ShaderProgram() {
 	glDeleteProgram(m_id);
 }
 
-ShaderProgram::operator GLuint() const {
-	return m_id;
-}
-
 void ShaderProgram::activate() {
 	glUseProgram(m_id);
 }
@@ -57,3 +55,36 @@ void ShaderProgram::activate() {
 void ShaderProgram::deactivate() {
 	glUseProgram(0);
 }
+
+template<>
+void ShaderProgram::setUniform(const char* uniform, glm::mat4 value) {
+	activate();
+	glUniformMatrix4fv(glGetUniformLocation(m_id, uniform), 1, GL_FALSE, glm::value_ptr(value));
+}
+
+template<>
+void ShaderProgram::setUniform(const char* uniform, glm::vec3 value) {
+	activate();
+	glUniform3fv(glGetUniformLocation(m_id, uniform), 1, glm::value_ptr(value));
+}
+
+template<>
+void ShaderProgram::setUniform(const char* uniform, int value) {
+	activate();
+	glUniform1i(glGetUniformLocation(m_id, uniform), value);
+}
+
+template<>
+void ShaderProgram::setUniform(const char* uniform, GLuint value) {
+	activate(); 
+	glUniform1i(glGetUniformLocation(m_id, uniform), value);
+}
+
+template<>
+void ShaderProgram::setUniform(const char* uniform, float value) {
+	activate();
+	glUniform1f(glGetUniformLocation(m_id, uniform), value);
+}
+
+template<typename T>
+void ShaderProgram::setUniform(const char* uniform, T value) {}

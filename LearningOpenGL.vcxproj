@@ -180,7 +180,8 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh.cpp" />
     <ClCompile Include="src\model.cpp" />
-    <ClCompile Include="src\msaabuffer.cpp" />
+    <ClCompile Include="src\renderer.cpp" />
+    <ClCompile Include="src\screenquad.cpp" />
     <ClCompile Include="src\shaderprogram.cpp" />
     <ClCompile Include="src\skybox.cpp" />
     <ClCompile Include="src\texture.cpp" />
@@ -188,14 +189,15 @@
     <ClCompile Include="src\vertexbuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\default.frag" />
-    <None Include="shaders\default.vert" />
-    <None Include="shaders\pbr.frag" />
-    <None Include="shaders\pbr.vert" />
-    <None Include="shaders\postprocessing.frag" />
-    <None Include="shaders\postprocessing.vert" />
-    <None Include="shaders\skybox.frag" />
-    <None Include="shaders\skybox.vert" />
+    <None Include="shaders\blinnphong_fragment.glsl" />
+    <None Include="shaders\empty_fragment.glsl" />
+    <None Include="shaders\modeldepth_vertex.glsl" />
+    <None Include="shaders\model_vertex.glsl" />
+    <None Include="shaders\pbr_fragment.glsl" />
+    <None Include="shaders\postprocessing_fragment.glsl" />
+    <None Include="shaders\postprocessing_vertex.glsl" />
+    <None Include="shaders\skybox_fragment.glsl" />
+    <None Include="shaders\skybox_vertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\aabb.h" />
@@ -206,7 +208,8 @@
     <ClInclude Include="src\indexbuffer.h" />
     <ClInclude Include="src\mesh.h" />
     <ClInclude Include="src\model.h" />
-    <ClInclude Include="src\msaabuffer.h" />
+    <ClInclude Include="src\renderer.h" />
+    <ClInclude Include="src\screenquad.h" />
     <ClInclude Include="src\shaderprogram.h" />
     <ClInclude Include="src\skybox.h" />
     <ClInclude Include="src\texture.h" />

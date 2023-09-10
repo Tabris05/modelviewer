@@ -1,12 +1,10 @@
 #include "texture.h"
-
 #include <stb/stb_image.h>
 
 Texture::Texture() : m_widthImg{ 0 }, m_heightImg{ 0 }, m_numColCh{ 0 }, m_texID{ 0 }, m_slot{ 0 }, m_rc{ nullptr } {}
 
-Texture::Texture(const char* filename, GLuint slot, GLenum colorspace) : m_slot{ slot }, m_rc{ new size_t(1) } {
+Texture::Texture(const char* filename, GLenum colorspace, GLuint slot) : m_slot{ slot }, m_rc{ new size_t(1) } {
 	unsigned char* bytes = stbi_load(filename, &m_widthImg, &m_heightImg, &m_numColCh, 0);
-
 	glGenTextures(1, &m_texID);
 	glActiveTexture(GL_TEXTURE0 + m_slot);
 	glBindTexture(GL_TEXTURE_2D, m_texID);

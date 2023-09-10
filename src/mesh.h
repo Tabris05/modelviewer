@@ -25,7 +25,6 @@ public:
 
 	void bindTextures(ShaderProgram& shaderProgram);
 	void draw(ShaderProgram& shaderProgram, Camera& camera, glm::mat4 model = glm::mat4(1.0f));
-	void drawTextureless(ShaderProgram& shaderProgram, Camera& camera, glm::mat4 model = glm::mat4(1.0f));
 };
 
 #endif

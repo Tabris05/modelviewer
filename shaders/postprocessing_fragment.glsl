@@ -7,22 +7,13 @@ uniform sampler2D fTexID;
 uniform float fGamma;
 uniform float fSunlightIntensity;
 
-float luminance(vec3 input) {
-	return dot(input, vec3(0.212f, 0.7152f, 0.0722f));
+vec3 toneMap(vec3 inputVal, float whiteLevel) {
+	float oldLuminance = dot(inputVal, vec3(0.212f, 0.7152f, 0.0722f));
+	return inputVal * (oldLuminance * (1.0f + (oldLuminance / (whiteLevel * whiteLevel)))) / (1.0f + oldLuminance) / oldLuminance;
 }
 
-vec3 changeLuminance(vec3 color, float newLuminance) {
-	float oldLuminance = luminance(color);
-	return color * (newLuminance / oldLuminance);
-}
-
-vec3 toneMap(vec3 input, float whiteLevel) {
-	float oldLuminance = luminance(input);
-	return changeLuminance(input, (oldLuminance * (1.0f + (oldLuminance / (whiteLevel * whiteLevel)))) / (1.0f + oldLuminance));
-}
-
-vec3 gammaCorrect(vec3 input) {
-	return pow(input, vec3(1.0f/fGamma));
+vec3 gammaCorrect(vec3 inputVal) {
+	return pow(inputVal, vec3(1.0f/fGamma));
 }
 
 void main() {

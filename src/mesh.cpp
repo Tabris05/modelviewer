@@ -19,43 +19,48 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, std::optio
 
 void Mesh::bindTextures(ShaderProgram& shaderProgram) {
 	if (m_diffuseMap) {
-		glUniform1i(glGetUniformLocation(shaderProgram, "diffuseTexID"), m_diffuseMap->getSlot());
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasDiffuse"), 1);
+		m_diffuseMap->bind();
+		shaderProgram.setUniform("diffuseTexID", m_diffuseMap->getSlot());
+		shaderProgram.setUniform("hasDiffuse", 1);
 	}
 	else {
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasDiffuse"), 0);
+		shaderProgram.setUniform("hasDiffuse", 0);
 	}
 
 	if (m_normalMap) {
-		glUniform1i(glGetUniformLocation(shaderProgram, "normalTexID"), m_normalMap->getSlot());
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasNormal"), 1);
+		m_normalMap->bind();
+		shaderProgram.setUniform("normalTexID", m_normalMap->getSlot());
+		shaderProgram.setUniform("hasNormal", 1);
 	}
 	else {
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasNormal"), 0);
+		shaderProgram.setUniform("hasNormal", 0);
 	}
 
 	if (m_aoMap) {
-		glUniform1i(glGetUniformLocation(shaderProgram, "aoTexID"), m_aoMap->getSlot());
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasAO"), 1);
+		m_aoMap->bind();
+		shaderProgram.setUniform("aoTexID", m_aoMap->getSlot());
+		shaderProgram.setUniform("hasAO", 1);
 	}
 	else {
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasAO"), 0);
+		shaderProgram.setUniform("hasAO", 1);
 	}
 
 	if (m_metalnessMap) {
-		glUniform1i(glGetUniformLocation(shaderProgram, "metalnessTexID"), m_metalnessMap->getSlot());
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasMetalness"), 1);
+		m_metalnessMap->bind();
+		shaderProgram.setUniform("metalnessTexID", m_metalnessMap->getSlot());
+		shaderProgram.setUniform("hasMetalness", 1);
 	}
 	else {
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasMetalness"), 0);
+		shaderProgram.setUniform("hasMetalness", 0);
 	}
 
 	if (m_roughnessMap) {
-		glUniform1i(glGetUniformLocation(shaderProgram, "roughnessTexID"), m_roughnessMap->getSlot());
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasRoughness"), 1);
+		m_roughnessMap->bind();
+		shaderProgram.setUniform("roughnessTexID", m_roughnessMap->getSlot());
+		shaderProgram.setUniform("hasRoughness", 1);
 	}
 	else {
-		glUniform1i(glGetUniformLocation(shaderProgram, "hasRoughness"), 0);
+		shaderProgram.setUniform("hasRoughness", 0);
 	}
 }
 
@@ -66,19 +71,8 @@ void Mesh::draw(ShaderProgram& shaderProgram, Camera& camera, glm::mat4 model) {
 	bindTextures(shaderProgram);
 
 	glm::vec3 cameraPos = camera.getPos();
-	glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-	glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "camMatrix"), 1, GL_FALSE, glm::value_ptr(camera.getProjMatrix(45.0f, 0.1f, 100.0f) * camera.getViewMatrix()));
-	glUniform3f(glGetUniformLocation(shaderProgram, "camPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-	glDrawElements(GL_TRIANGLES, m_numIndices, GL_UNSIGNED_INT, 0);
-}
-
-void Mesh::drawTextureless(ShaderProgram& shaderProgram, Camera& camera, glm::mat4 model) {
-	shaderProgram.activate();
-	m_vArr.bind();
-
-	glm::vec3 cameraPos = camera.getPos();
-	glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-	glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "camMatrix"), 1, GL_FALSE, glm::value_ptr(camera.getProjMatrix(45.0f, 0.1f, 100.0f) * camera.getViewMatrix()));
-	glUniform3f(glGetUniformLocation(shaderProgram, "camPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	shaderProgram.setUniform("model", model);
+	shaderProgram.setUniform("camMatrix", camera.getProjMatrix(45.0f, 0.1f, 100.0f) * camera.getViewMatrix());
+	shaderProgram.setUniform("camPos", cameraPos);
 	glDrawElements(GL_TRIANGLES, m_numIndices, GL_UNSIGNED_INT, 0);
 }
