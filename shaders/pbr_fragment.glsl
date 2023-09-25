@@ -7,13 +7,20 @@ in vec3 fLightDir;
 in vec3 fCamPos;
 in vec3 fFragPos;
 in vec3 fCol;
+in vec4 fFragPosLight;
 
 uniform sampler2D diffuseTexID;
 uniform sampler2D normalTexID;
 uniform sampler2D aoTexID;
 uniform sampler2D metalnessTexID;
 uniform sampler2D roughnessTexID;
+uniform sampler2D shadowMapTexID;
+uniform sampler3D shadowNoiseTexID;
 uniform vec3 lightCol;
+uniform float texelSize;
+uniform float sampleRadius;
+uniform int shadowNoiseWindowSize;
+uniform int shadowNoiseFilterSize;
 
 uniform bool hasDiffuse;
 uniform bool hasNormal;
@@ -24,6 +31,29 @@ uniform bool hasRoughness;
 uniform bool normalsActive;
 
 #define PI 3.141593f
+
+float inShadow() {
+	float result = 0.0f;
+	float bias = mix(0.005f, 0.0f, dot(vec3(0.0f, 0.0f, 1.0f), -fLightDir));
+	vec3 projectedCoords = fFragPosLight.xyz / fFragPosLight.w * 0.5f + 0.5f;
+	ivec3 offset = ivec3(0, ivec2(mod(gl_FragCoord.xy, vec2(shadowNoiseWindowSize))));
+	for(int i = 0; i < clamp(shadowNoiseFilterSize / gl_FragCoord.z, 1, shadowNoiseFilterSize); i++) {
+		float cur = 0.0f; 
+		for(int j = i * shadowNoiseFilterSize; j < (i + 1) * shadowNoiseFilterSize; j++) {
+			offset.x = j;
+			vec2 samplePoint = projectedCoords.xy + texelFetch(shadowNoiseTexID, offset, 0).rg * sampleRadius * texelSize;
+			cur += float(projectedCoords.z - bias > texture(shadowMapTexID, samplePoint).r);
+		}
+		if(i == 0 && (cur == 0.0f || cur == 1.0f)) {
+			result += cur * (shadowNoiseFilterSize - i - 1);
+			break;
+		}
+		else {
+			result += cur;
+		}
+	}
+	return 1.0f - (result / (shadowNoiseFilterSize * shadowNoiseFilterSize));
+}
 
 float distributionGGX(vec3 normal, vec3 halfway, float alpha) {
 	float alphaSquared = alpha * alpha;
@@ -63,7 +93,7 @@ vec3 directionalLight(vec3 albedo) {
 	vec3 specular = (distribution * geometry * fresnel) / (4.0f * max(dot(normal, viewDir), 0.0f) * max(dot(normal, lightDir), 0.0f) + 0.000001f);
 	vec3 ambient = vec3(0.05f) * albedo * ao;
 
-	return (diffuse * albedo / PI + specular) * lightCol * max(dot(normal, lightDir), 0.0f) + ambient;
+	return (diffuse * albedo / PI + specular) * lightCol * max(dot(normal, lightDir), 0.0f) * inShadow() + ambient;
 }
 
 void main() {

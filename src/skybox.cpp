@@ -71,11 +71,8 @@ Skybox::Skybox(std::string path, std::array<std::string, 6> faces) :
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
-void Skybox::draw(ShaderProgram& shaderProgram, Camera& camera) {
-    shaderProgram.activate();
+void Skybox::draw(ShaderProgram& shaderProgram) {
     m_vArr.bind();
-
-    shaderProgram.setUniform("camMatrix", camera.getProjMatrix(45.0f, 0.1f, 100.0f) * glm::mat4(glm::mat3(camera.getViewMatrix())));
     
     glDrawArrays(GL_TRIANGLES, 0, 36);
 }

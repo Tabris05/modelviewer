@@ -18,7 +18,7 @@ private:
 	glm::mat4 m_baseTransform;
 	aabb m_aabb;
 
-	GLuint m_texSlots = 0;
+	GLuint m_texSlotStart = 2;
 
 	void processNode(aiNode* node, const aiScene* scene, glm::mat4 parentTransform = glm::mat4(1.0f));
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
@@ -26,7 +26,9 @@ private:
 	glm::mat4 aiMat4ToGLM(const aiMatrix4x4* from);
 public:
 	Model(std::string path);
-	void draw(ShaderProgram& shader, Camera& camera, glm::mat4 transformation = glm::mat4(1.0f));
+
+	aabb getAABB() const;
+	void draw(ShaderProgram& shader, glm::mat4 transformation = glm::mat4(1.0f));
 };
 
 #endif

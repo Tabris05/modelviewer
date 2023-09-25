@@ -24,7 +24,8 @@ public:
 	Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, std::optional<Texture> diffuseMap, std::optional<Texture> normalMap, std::optional<Texture> aoMap, std::optional<Texture> metalnessMap, std::optional<Texture> roughnessMap);
 
 	void bindTextures(ShaderProgram& shaderProgram);
-	void draw(ShaderProgram& shaderProgram, Camera& camera, glm::mat4 model = glm::mat4(1.0f));
+
+	void draw(ShaderProgram& shaderProgram, glm::mat4 model = glm::mat4(1.0f));
 };
 
 #endif

@@ -2,6 +2,9 @@
 #include <algorithm>
 #include <climits>
 
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/vector_angle.hpp>
+
 Model::Model(std::string path) : m_directory{ path.substr(0, path.find_last_of('\\') + 1) }, m_baseTransform{ glm::mat4(1.0f) }, m_aabb { glm::vec3(FLT_MAX), glm::vec3(FLT_MIN) } {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
@@ -10,10 +13,22 @@ Model::Model(std::string path) : m_directory{ path.substr(0, path.find_last_of('
 	glm::vec3 size = m_aabb.m_max - m_aabb.m_min;
 	float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
 	m_baseTransform = glm::scale(m_baseTransform, glm::vec3(scale));
-}
-
-void Model::draw(ShaderProgram& shader, Camera& camera, glm::mat4 transformation) {
-	for (size_t i = 0; i < m_meshes.size(); i++) m_meshes[i].draw(shader, camera, transformation * m_baseTransform * m_transformations[i]);
+	glm::vec3 vertices[8] = {
+		glm::vec3(m_aabb.m_min.x, m_aabb.m_min.y, m_aabb.m_min.z),
+		glm::vec3(m_aabb.m_max.x, m_aabb.m_min.y, m_aabb.m_min.z),
+		glm::vec3(m_aabb.m_max.x, m_aabb.m_max.y, m_aabb.m_min.z),
+		glm::vec3(m_aabb.m_min.x, m_aabb.m_max.y, m_aabb.m_min.z),
+		glm::vec3(m_aabb.m_min.x, m_aabb.m_min.y, m_aabb.m_max.z),
+		glm::vec3(m_aabb.m_max.x, m_aabb.m_min.y, m_aabb.m_max.z),
+		glm::vec3(m_aabb.m_max.x, m_aabb.m_max.y, m_aabb.m_max.z),
+		glm::vec3(m_aabb.m_min.x, m_aabb.m_max.y, m_aabb.m_max.z),
+	};
+	for (auto& i : vertices) i = glm::vec3(m_baseTransform * glm::vec4(i, 1.0f));
+	m_aabb = { glm::vec3(FLT_MAX), glm::vec3(FLT_MIN) };
+	for (auto i : vertices) {
+		m_aabb.m_min = glm::min(m_aabb.m_min, i);
+		m_aabb.m_max = glm::max(m_aabb.m_max, i);
+	}
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene, glm::mat4 parentTransform) {
@@ -80,7 +95,7 @@ std::optional<Texture> Model::loadMaterialTexture(aiMaterial* mat, aiTextureType
 		std::string fullPath = m_directory + std::string(str.C_Str());
 		std::optional<Texture> maybeTex = m_loadedTextures[fullPath];
 		if (maybeTex)  return *maybeTex;
-		Texture result{ fullPath.c_str(), colorspace, m_texSlots++ };
+		Texture result{ fullPath.c_str(), colorspace, m_texSlotStart++ };
 		m_loadedTextures[fullPath] = result;
 		return result;
 	}
@@ -94,4 +109,12 @@ glm::mat4 Model::aiMat4ToGLM(const aiMatrix4x4* from) {
 	to[2][0] = (GLfloat)from->a3; to[2][1] = (GLfloat)from->b3;  to[2][2] = (GLfloat)from->c3; to[2][3] = (GLfloat)from->d3;
 	to[3][0] = (GLfloat)from->a4; to[3][1] = (GLfloat)from->b4;  to[3][2] = (GLfloat)from->c4; to[3][3] = (GLfloat)from->d4;
 	return to;
+}
+
+aabb Model::getAABB() const {
+	return m_aabb;
+}
+
+void Model::draw(ShaderProgram& shader, glm::mat4 transformation) {
+	for (size_t i = 0; i < m_meshes.size(); i++) m_meshes[i].draw(shader, transformation * m_baseTransform * m_transformations[i]);
 }

@@ -64,15 +64,11 @@ void Mesh::bindTextures(ShaderProgram& shaderProgram) {
 	}
 }
 
-void Mesh::draw(ShaderProgram& shaderProgram, Camera& camera, glm::mat4 model) {
-	shaderProgram.activate();
+void Mesh::draw(ShaderProgram& shaderProgram, glm::mat4 model) {
 	m_vArr.bind();
 	
 	bindTextures(shaderProgram);
-
-	glm::vec3 cameraPos = camera.getPos();
 	shaderProgram.setUniform("model", model);
-	shaderProgram.setUniform("camMatrix", camera.getProjMatrix(45.0f, 0.1f, 100.0f) * camera.getViewMatrix());
-	shaderProgram.setUniform("camPos", cameraPos);
+
 	glDrawElements(GL_TRIANGLES, m_numIndices, GL_UNSIGNED_INT, 0);
 }

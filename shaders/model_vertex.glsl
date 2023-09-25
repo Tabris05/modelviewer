@@ -10,9 +10,11 @@ out vec3 fLightDir;
 out vec3 fCamPos;
 out vec3 fFragPos;
 out vec3 fCol;
+out vec4 fFragPosLight;
 
 uniform mat4 model;
 uniform mat4 camMatrix;
+uniform mat4 lightMatrix;
 uniform vec3 lightDir;
 uniform vec3 camPos;
 
@@ -28,9 +30,10 @@ void main() {
 	fLightDir = invTBN * lightDir;
 	fCamPos = invTBN * camPos;
 	fFragPos = invTBN * wPos;
-	
+	fFragPosLight = lightMatrix * vec4(wPos, 1.0f);
+
 	fTexCoord = vTexCoord;
 	fCol = vCol;
 
-	gl_Position = camMatrix * vec4(wPos, 1.0);
+	gl_Position = camMatrix * vec4(wPos, 1.0f);
 }

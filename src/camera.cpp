@@ -1,5 +1,9 @@
 #include "camera.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/vector_angle.hpp>
+
 Camera::Camera(int width, int height, glm::vec3 position, glm::vec3 rotation) : m_width{ width }, m_height{ height }, m_pos{ position }, m_rot{ rotation } {}
 
 glm::mat4 Camera::getProjMatrix(float fovDeg, float nearPlane, float farPlane) const {

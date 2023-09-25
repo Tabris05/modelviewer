@@ -9,9 +9,9 @@ A toy 3D model viewer I wrote to teach myself the fundamentals of realtime graph
 - Gamma-Correction and Tone-Mapping
 - Support for Albedo, Normal, Metalness, Roughness, and Ambient Occlusion texture mapping
 - Support for both Blinn-Phong and Physically Based shading
+- Shadowmapping with Jittered Poisson Disk PCF
 ### Planned Features:
 - Screen-Space Ambient Occlusion
-- Shadowmapping with Percentage-Closer Filtering
 - Image-Based Lighting
 - Emissive Materials / Bloom
 - Weighted Blended Approximate OIT

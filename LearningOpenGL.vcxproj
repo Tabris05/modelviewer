@@ -81,10 +81,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(ProjectDir)\src</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(ProjectDir)\src</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -175,6 +177,7 @@
     <ClCompile Include="lib\stb.c" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\framebuffer.cpp" />
+    <ClCompile Include="src\multisampledframebuffer.cpp" />
     <ClCompile Include="src\glwindow.cpp" />
     <ClCompile Include="src\indexbuffer.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -183,6 +186,7 @@
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\screenquad.cpp" />
     <ClCompile Include="src\shaderprogram.cpp" />
+    <ClCompile Include="src\shadowmapnoise.cpp" />
     <ClCompile Include="src\skybox.cpp" />
     <ClCompile Include="src\texture.cpp" />
     <ClCompile Include="src\vertexarray.cpp" />
@@ -202,8 +206,9 @@
   <ItemGroup>
     <ClInclude Include="src\aabb.h" />
     <ClInclude Include="src\camera.h" />
-    <ClInclude Include="src\dbg.h" />
     <ClInclude Include="src\framebuffer.h" />
+    <ClInclude Include="src\multisampledframebuffer.h" />
+    <ClInclude Include="src\dbg.h" />
     <ClInclude Include="src\glwindow.h" />
     <ClInclude Include="src\indexbuffer.h" />
     <ClInclude Include="src\mesh.h" />
@@ -211,6 +216,7 @@
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\screenquad.h" />
     <ClInclude Include="src\shaderprogram.h" />
+    <ClInclude Include="src\shadowmapnoise.h" />
     <ClInclude Include="src\skybox.h" />
     <ClInclude Include="src\texture.h" />
     <ClInclude Include="src\vertex.h" />

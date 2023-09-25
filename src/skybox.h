@@ -21,7 +21,7 @@ private:
 public:
 	Skybox(std::string path, std::array<std::string, 6> faces);
 
-	void draw(ShaderProgram& shaderProgram, Camera& camera);
+	void draw(ShaderProgram& shaderProgram);
 };
 
 #endif

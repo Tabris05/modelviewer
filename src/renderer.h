@@ -4,9 +4,11 @@
 #include "glwindow.h"
 #include "model.h"
 #include "screenquad.h"
+#include "multisampledframebuffer.h"
 #include "framebuffer.h"
 #include "camera.h"
 #include "skybox.h"
+#include "shadowmapnoise.h"
 #include "shaderprogram.h"
 
 
@@ -18,12 +20,15 @@ private:
 	Model m_model;
 
 	ScreenQuad m_screenQuad;
-	FrameBuffer m_msaaBuffer;
-	FrameBuffer m_postprocessingBuffer;
+	MultisampledFramebuffer m_msaaBuffer;
+	Framebuffer m_shadowMapBuffer;
+	Framebuffer m_postprocessingBuffer;
 
 	Camera m_camera;
 
 	Skybox m_skybox{ "./assets/skybox/", { "px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png" } };
+
+	ShadowmapNoise m_shadowNoise;
 
 	ShaderProgram m_modelShaderDepth{ "./shaders/modeldepth_vertex.glsl", "./shaders/empty_fragment.glsl" };
 	ShaderProgram m_skyboxShaderDepth{ "./shaders/skybox_vertex.glsl", "./shaders/empty_fragment.glsl" };
@@ -32,11 +37,19 @@ private:
 	ShaderProgram m_skyboxShader{ "./shaders/skybox_vertex.glsl", "./shaders/skybox_fragment.glsl" };
 	ShaderProgram m_postProcessingShader{ "./shaders/postprocessing_vertex.glsl", "./shaders/postprocessing_fragment.glsl" };
 
-	const float m_sunlightIntensityBlinnPhong = 1.5f;
-	const float m_sunlightIntensityPBR = 5.0f;
-	const glm::vec3 m_lightDir{0.0f, 0.0f, 1.0f};
-	const glm::vec3 m_lightColorBlinnPhong{glm::vec3(0.98f, 0.90f, 0.74f) * glm::vec3(m_sunlightIntensityBlinnPhong)};
-	const glm::vec3 m_lightColorPBR{glm::vec3(0.98f, 0.90f, 0.74f) * glm::vec3(m_sunlightIntensityPBR)};
+	const int m_width, m_height;
+
+	constexpr static int m_shadowNoiseWindowSize = 8;
+	constexpr static int m_shadowNoiseFilterSize = 16;
+	constexpr static int m_shadowMapResolution = 2048;
+	constexpr static float m_sunlightIntensityBlinnPhong = 1.5f;
+	constexpr static float m_sunlightIntensityPBR = 5.0f;
+	constexpr static float m_fov = 45.0f;
+	constexpr static float m_nearPlane = 0.1f;
+	constexpr static float m_farPlane = 100.0f;
+	constexpr static glm::vec3 m_lightDir{ 0.0f, 0.0f, 1.0f };
+	constexpr static glm::vec3 m_lightColorBlinnPhong{ glm::vec3(0.98f, 0.90f, 0.74f) * glm::vec3(m_sunlightIntensityBlinnPhong) };
+	constexpr static glm::vec3 m_lightColorPBR{ glm::vec3(0.98f, 0.90f, 0.74f) * glm::vec3(m_sunlightIntensityPBR) };
 
 	float m_modelPitch = 0.0f, m_modelRoll = 0.0f, m_modelYaw = 0.0f, m_modelScale = 1.0f;
 	bool m_pbrEnabled = true, m_vsyncEnabled = true;
@@ -44,8 +57,11 @@ private:
 
 	void beginFrame();
 	void renderUI();
-	void depthPass(glm::mat4 transform = glm::mat4(1.0f));
-	void lightingPass(glm::mat4 transform = glm::mat4(1.0f));
+	glm::mat4 calcLightMatrix(glm::mat4 translation);
+	void shadowPass(glm::mat4 transform, glm::mat4 lightMatrix);
+	void depthPass(glm::mat4 transform);
+	void lightingPass(glm::mat4 transform, glm::mat4 lightMatrix);
+	void postprocessingPass();
 	void endFrame();
 
 public:

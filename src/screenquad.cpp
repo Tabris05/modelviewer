@@ -16,8 +16,8 @@ ScreenQuad::ScreenQuad(int width, int height) :
 
 void ScreenQuad::draw(ShaderProgram& shader) {
 	glDisable(GL_DEPTH_TEST);
-	shader.activate();
 	m_vArr.bind();
+
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glEnable(GL_DEPTH_TEST);
 }

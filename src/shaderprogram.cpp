@@ -58,31 +58,26 @@ void ShaderProgram::deactivate() {
 
 template<>
 void ShaderProgram::setUniform(const char* uniform, glm::mat4 value) {
-	activate();
 	glUniformMatrix4fv(glGetUniformLocation(m_id, uniform), 1, GL_FALSE, glm::value_ptr(value));
 }
 
 template<>
 void ShaderProgram::setUniform(const char* uniform, glm::vec3 value) {
-	activate();
 	glUniform3fv(glGetUniformLocation(m_id, uniform), 1, glm::value_ptr(value));
 }
 
 template<>
 void ShaderProgram::setUniform(const char* uniform, int value) {
-	activate();
 	glUniform1i(glGetUniformLocation(m_id, uniform), value);
 }
 
 template<>
 void ShaderProgram::setUniform(const char* uniform, GLuint value) {
-	activate(); 
 	glUniform1i(glGetUniformLocation(m_id, uniform), value);
 }
 
 template<>
 void ShaderProgram::setUniform(const char* uniform, float value) {
-	activate();
 	glUniform1f(glGetUniformLocation(m_id, uniform), value);
 }
 
