@@ -44,7 +44,7 @@ float inShadow() {
 			vec2 samplePoint = projectedCoords.xy + texelFetch(shadowNoiseTexID, offset, 0).rg * sampleRadius * texelSize;
 			cur += float(projectedCoords.z - bias > texture(shadowMapTexID, samplePoint).r);
 		}
-		if(i == 0 && (cur == 0.0f || cur == 1.0f)) {
+		if(cur == 0.0f || cur == 1.0f) {
 			result += cur * (shadowNoiseFilterSize - i - 1);
 			break;
 		}
