@@ -5,5 +5,6 @@ uniform mat4 model;
 uniform mat4 camMatrix;
 
 void main() {
-	gl_Position = camMatrix * model * vec4(vPos, 1.0f);
+	// even though matrix multiplication is associative, this code breaks on amd drivers without the added parentheses for some reason
+	gl_Position = camMatrix * (model * vec4(vPos, 1.0f));
 }
