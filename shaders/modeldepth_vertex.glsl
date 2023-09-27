@@ -5,5 +5,5 @@ uniform mat4 model;
 uniform mat4 camMatrix;
 
 void main() {
-	gl_Position = camMatrix * model * vec4(vPos, 1.0f);
+	gl_Position = camMatrix * (model * vec4(vPos, 1.0f));
 }
