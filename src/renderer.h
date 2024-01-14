@@ -26,13 +26,13 @@ private:
 
 	Camera m_camera;
 
-	Skybox m_skybox{ "./assets/skybox/", { "px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png" } };
+	float m_numMipLevels;
+	Skybox m_skybox{ m_numMipLevels };
 
 	ShadowmapNoise m_shadowNoise;
 
 	ShaderProgram m_modelShaderDepth{ "./shaders/modeldepth_vertex.glsl", "./shaders/empty_fragment.glsl" };
 	ShaderProgram m_skyboxShaderDepth{ "./shaders/skybox_vertex.glsl", "./shaders/empty_fragment.glsl" };
-	ShaderProgram m_modelShaderBlinnPhong{ "./shaders/model_vertex.glsl", "./shaders/blinnphong_fragment.glsl" };
 	ShaderProgram m_modelShaderPBR{ "./shaders/model_vertex.glsl", "./shaders/pbr_fragment.glsl" };
 	ShaderProgram m_skyboxShader{ "./shaders/skybox_vertex.glsl", "./shaders/skybox_fragment.glsl" };
 	ShaderProgram m_postProcessingShader{ "./shaders/postprocessing_vertex.glsl", "./shaders/postprocessing_fragment.glsl" };
@@ -42,17 +42,14 @@ private:
 	constexpr static int m_shadowNoiseWindowSize = 8;
 	constexpr static int m_shadowNoiseFilterSize = 16;
 	constexpr static int m_shadowMapResolution = 2048;
-	constexpr static float m_sunlightIntensityBlinnPhong = 1.5f;
-	constexpr static float m_sunlightIntensityPBR = 5.0f;
 	constexpr static float m_fov = 45.0f;
 	constexpr static float m_nearPlane = 0.1f;
 	constexpr static float m_farPlane = 100.0f;
 	constexpr static glm::vec3 m_lightDir{ 0.0f, 0.0f, 1.0f };
-	constexpr static glm::vec3 m_lightColorBlinnPhong{ glm::vec3(0.98f, 0.90f, 0.74f) * glm::vec3(m_sunlightIntensityBlinnPhong) };
-	constexpr static glm::vec3 m_lightColorPBR{ glm::vec3(0.98f, 0.90f, 0.74f) * glm::vec3(m_sunlightIntensityPBR) };
+	constexpr static glm::vec3 m_lightColorPBR{ glm::vec3(0.98f, 0.90f, 0.74f) * 5.0f };
 
 	float m_modelPitch = 0.0f, m_modelRoll = 0.0f, m_modelYaw = 0.0f, m_modelScale = 1.0f;
-	bool m_pbrEnabled = true, m_vsyncEnabled = true;
+	bool m_iblEnabled = true, m_vsyncEnabled = true;
 	double m_lastFrame = 0.0, m_curFrame = 0.0;
 
 	void beginFrame();

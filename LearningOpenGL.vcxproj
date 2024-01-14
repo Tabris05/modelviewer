@@ -193,13 +193,18 @@
     <ClCompile Include="src\vertexbuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\blinnphong_fragment.glsl" />
+    <None Include="shaders\brdflut_fragment.glsl" />
+    <None Include="shaders\brdflut_vertex.glsl" />
     <None Include="shaders\empty_fragment.glsl" />
     <None Include="shaders\modeldepth_vertex.glsl" />
     <None Include="shaders\model_vertex.glsl" />
     <None Include="shaders\pbr_fragment.glsl" />
     <None Include="shaders\postprocessing_fragment.glsl" />
     <None Include="shaders\postprocessing_vertex.glsl" />
+    <None Include="shaders\skyboxconversion_fragment.glsl" />
+    <None Include="shaders\skyboxconversion_vertex.glsl" />
+    <None Include="shaders\skyboxconvolution_fragment.glsl" />
+    <None Include="shaders\skyboxprefilter_fragment.glsl" />
     <None Include="shaders\skybox_fragment.glsl" />
     <None Include="shaders\skybox_vertex.glsl" />
   </ItemGroup>
@@ -207,6 +212,7 @@
     <ClInclude Include="src\aabb.h" />
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\framebuffer.h" />
+    <ClInclude Include="src\metautils.h" />
     <ClInclude Include="src\multisampledframebuffer.h" />
     <ClInclude Include="src\dbg.h" />
     <ClInclude Include="src\glwindow.h" />

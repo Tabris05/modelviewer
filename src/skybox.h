@@ -15,12 +15,12 @@ using GLid = GLuint;
 
 class Skybox {
 private:
-	GLid m_texID;
+	GLid m_skyboxTexID, m_irradianceTexID, m_prefilterTexID, m_brdfLUTTexID;
 	VertexArray m_vArr;
 	VertexBuffer m_vBuf;
 public:
-	Skybox(std::string path, std::array<std::string, 6> faces);
-
+	Skybox(float& outNumMiplevels);
+	~Skybox();
 	void draw(ShaderProgram& shaderProgram);
 };
 

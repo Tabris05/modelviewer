@@ -44,18 +44,26 @@ void Model::processNode(aiNode* node, const aiScene* scene, glm::mat4 parentTran
 Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 	std::vector<Vertex> vertices;
 	std::vector<GLuint> indices;
-	std::optional<Texture> diffuseMap, normalMap, aoMap, metalnessMap, roughnessMap;
-	glm::vec3 meshCol(1.0f);
-
+	Mesh::ColorData diffuse = glm::vec3(1.0f);
+	Mesh::MaterialData ao = std::monostate{}, metalness = std::monostate{}, roughness = std::monostate{};
+	Mesh::NormalData normal;
 	if (mesh->mMaterialIndex >= 0) {
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-		aiColor4D diffuseCol;
-		if (aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuseCol) == AI_SUCCESS) meshCol = glm::vec3(diffuseCol.r, diffuseCol.g, diffuseCol.b);
-		diffuseMap = loadMaterialTexture(material, aiTextureType_DIFFUSE);
-		normalMap = loadMaterialTexture(material, aiTextureType_NORMALS);
-		aoMap = loadMaterialTexture(material, aiTextureType_LIGHTMAP);
-		metalnessMap = loadMaterialTexture(material, aiTextureType_METALNESS);
-		roughnessMap = loadMaterialTexture(material, aiTextureType_DIFFUSE_ROUGHNESS);
+		aiColor4D outVal;
+		if (aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &outVal) == AI_SUCCESS) diffuse = glm::vec3(outVal.r, outVal.g, outVal.b);
+		if (aiGetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT, &outVal) == AI_SUCCESS) ao = std::max(outVal.r, std::max(outVal.g, std::max(outVal.b, outVal.a)));
+		if (aiGetMaterialColor(material, AI_MATKEY_METALLIC_FACTOR, &outVal) == AI_SUCCESS) metalness = outVal.r;
+		if (aiGetMaterialColor(material, AI_MATKEY_ROUGHNESS_FACTOR, &outVal) == AI_SUCCESS) roughness = outVal.r;
+
+		std::optional<Texture> diffuseMap = loadMaterialTexture(material, aiTextureType_DIFFUSE);
+		if (diffuseMap) diffuse = diffuseMap.value();
+		std::optional<Texture> aoMap = loadMaterialTexture(material, aiTextureType_LIGHTMAP);
+		if (aoMap) ao = aoMap.value();
+		std::optional<Texture> metalnessMap = loadMaterialTexture(material, aiTextureType_METALNESS);
+		if (metalnessMap) metalness = metalnessMap.value();
+		std::optional<Texture> roughnessMap = loadMaterialTexture(material, aiTextureType_DIFFUSE_ROUGHNESS);
+		if (roughnessMap) roughness = roughnessMap.value();
+		normal = loadMaterialTexture(material, aiTextureType_NORMALS);
 	}
 
 	for (size_t i = 0; i < mesh->mNumVertices; i++) {
@@ -64,7 +72,6 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 		m_aabb.m_max = glm::max(m_aabb.m_max, worldSpaceVertex);
 		vertices.push_back(Vertex{
 			glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z),
-			(mesh->mColors[0] ? glm::vec3(mesh->mColors[0][i].r, mesh->mColors[0][i].g, mesh->mColors[0][i].b) : glm::vec3(1.0f)) * meshCol,
 			glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z),
 			(mesh->mTangents ? glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z) : glm::vec3(0.0f)),
 			mesh->mTextureCoords[0] ? glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y) : glm::vec2(0.0f),
@@ -76,7 +83,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 		for (size_t j = 0; j < curFace.mNumIndices; j++) indices.push_back(curFace.mIndices[j]);
 	}
 
-	return Mesh(std::move(vertices), std::move(indices), std::move(diffuseMap), std::move(normalMap), std::move(aoMap), std::move(metalnessMap), std::move(roughnessMap));
+	return Mesh(std::move(vertices), std::move(indices), std::move(diffuse), std::move(normal), std::move(ao), std::move(metalness), std::move(roughness));
 }
 
 std::optional<Texture> Model::loadMaterialTexture(aiMaterial* mat, aiTextureType type) {

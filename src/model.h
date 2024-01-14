@@ -18,7 +18,7 @@ private:
 	glm::mat4 m_baseTransform;
 	aabb m_aabb;
 
-	GLuint m_texSlotStart = 2;
+	GLuint m_texSlotStart = 7;
 
 	void processNode(aiNode* node, const aiScene* scene, glm::mat4 parentTransform = glm::mat4(1.0f));
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);

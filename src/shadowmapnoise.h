@@ -11,8 +11,6 @@ private:
 public:
 	ShadowmapNoise(int windowSize, int filterSize);
 	~ShadowmapNoise();
-
-	void bind();
 };
 
 #endif

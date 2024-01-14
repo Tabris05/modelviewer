@@ -2,6 +2,7 @@
 #define MESH_H
 
 #include <vector>
+#include <variant>
 #include <optional>
 
 #include "vertex.h"
@@ -12,16 +13,22 @@
 #include "texture.h"
 
 class Mesh {
+public:
+	using ColorData = std::variant<Texture, glm::vec3>;
+	using MaterialData = std::variant<Texture, float, std::monostate>;
+	using NormalData = std::optional<Texture>;
 private:
 	size_t m_numIndices;
-	std::optional<Texture> m_diffuseMap, m_normalMap, m_aoMap, m_metalnessMap, m_roughnessMap;
+	ColorData m_diffuse;
+	NormalData m_normal;
+	MaterialData m_ao, m_metalness, m_roughness;
 
 	VertexArray m_vArr;
 	VertexBuffer m_vBuf;
 	IndexBuffer m_iBuf;
 
 public:
-	Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, std::optional<Texture> diffuseMap, std::optional<Texture> normalMap, std::optional<Texture> aoMap, std::optional<Texture> metalnessMap, std::optional<Texture> roughnessMap);
+	Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, ColorData diffuse, NormalData normal, MaterialData ao, MaterialData metalness, MaterialData roughness);
 
 	void bindTextures(ShaderProgram& shaderProgram);
 

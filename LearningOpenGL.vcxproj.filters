@@ -101,9 +101,6 @@
     <None Include="shaders\empty_fragment.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="shaders\blinnphong_fragment.glsl">
-      <Filter>Resource Files\shaders</Filter>
-    </None>
     <None Include="shaders\model_vertex.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
@@ -123,6 +120,24 @@
       <Filter>Resource Files\shaders</Filter>
     </None>
     <None Include="shaders\modeldepth_vertex.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="shaders\skyboxconversion_vertex.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="shaders\skyboxconversion_fragment.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="shaders\skyboxconvolution_fragment.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="shaders\skyboxprefilter_fragment.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="shaders\brdflut_fragment.glsl">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="shaders\brdflut_vertex.glsl">
       <Filter>Resource Files\shaders</Filter>
     </None>
   </ItemGroup>
@@ -179,6 +194,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\shadowmapnoise.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\metautils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

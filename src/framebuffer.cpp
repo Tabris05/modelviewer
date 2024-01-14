@@ -62,3 +62,8 @@ void Framebuffer::blitTo(Framebuffer& dst, GLenum bufferType) {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst);
 	glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, bufferType, GL_NEAREST);
 }
+
+void Framebuffer::reallocRenderBuffer(size_t index, int width, int height, GLenum internalFormat) {
+	glBindRenderbuffer(GL_RENDERBUFFER, m_rBufIDs[index]);
+	glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
+}

@@ -28,6 +28,7 @@ public:
 	void bindTexture(size_t index, GLuint slot);
 	void unbindTexture();
 	void blitTo(Framebuffer& dst, GLenum bufferType);
+	void reallocRenderBuffer(size_t index, int width, int height, GLenum internalFormat);
 };
 
 #endif

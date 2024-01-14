@@ -19,7 +19,7 @@ ShadowmapNoise::ShadowmapNoise(int windowSize, int filterSize) {
 			}
 		}
 	}
-	glActiveTexture(GL_TEXTURE1);
+	glActiveTexture(GL_TEXTURE2);
 	glGenTextures(1, &m_texID);
 	glBindTexture(GL_TEXTURE_3D, m_texID);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -30,10 +30,6 @@ ShadowmapNoise::ShadowmapNoise(int windowSize, int filterSize) {
 }
 
 ShadowmapNoise::~ShadowmapNoise() {
-}
-
-void ShadowmapNoise::bind() {
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_3D, m_texID);
+	glDeleteTextures(1, &m_texID);
 }
 

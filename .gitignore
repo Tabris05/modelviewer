@@ -1,5 +1,6 @@
 x64/
 models/
 imgui.ini
+*.hdr
 assimp-vc143-mt.dll
 LearningOpenGL.vcxproj.user

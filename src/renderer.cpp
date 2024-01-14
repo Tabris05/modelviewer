@@ -7,6 +7,16 @@
 
 #include "dbg.h"
 
+// Texture slots
+// slot 0: postprocessing framebuffer
+// slot 1: shadow map
+// slot 2: pcf noise
+// slot 3: skybox cubemap
+// slot 4: irradiance cubemap
+// slot 5: prefiltered environment map
+// slot 6: BRDF integration map
+// slot 7+: model textures
+
 Renderer::Renderer(int width, int height, const char* modelPath) :
 	m_width { width },
 	m_height { height },
@@ -17,38 +27,33 @@ Renderer::Renderer(int width, int height, const char* modelPath) :
 	m_shadowMapBuffer { m_shadowMapResolution, m_shadowMapResolution},
 	m_shadowNoise{ m_shadowNoiseWindowSize, m_shadowNoiseFilterSize },
 	m_postprocessingBuffer{ width, height },
-	m_camera{ width, height, glm::vec3(-0.75f, 1.0f, -1.5f), glm::vec3(0.5f, -0.5f, 1.0f) } {
+	m_camera{ width, height, glm::vec3(-0.75f, 1.0f, -1.5f), /*glm::vec3(0.5f, -0.35f, 1.0f)*/ glm::vec3(0.5f, -0.75f, 1.0f)} {
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(m_window, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
-	m_modelShaderBlinnPhong.activate();
-	m_modelShaderBlinnPhong.setUniform("sampleRadius", 4.0f);
-	m_modelShaderBlinnPhong.setUniform("shadowMapTexID", 0);
-	m_modelShaderBlinnPhong.setUniform("shadowNoiseTexID", 1);
-	m_modelShaderBlinnPhong.setUniform("lightDir", m_lightDir);
-	m_modelShaderBlinnPhong.setUniform("lightCol", m_lightColorBlinnPhong);
-	m_modelShaderBlinnPhong.setUniform("texelSize", 1.0f / m_shadowMapResolution);
-	m_modelShaderBlinnPhong.setUniform("shadowNoiseWindowSize", m_shadowNoiseWindowSize);
-	m_modelShaderBlinnPhong.setUniform("shadowNoiseFilterSize", m_shadowNoiseFilterSize);
-
 	m_modelShaderPBR.activate();
 	m_modelShaderPBR.setUniform("sampleRadius", 4.0f);
-	m_modelShaderPBR.setUniform("shadowMapTexID", 0);
-	m_modelShaderPBR.setUniform("shadowNoiseTexID", 1);
+	m_modelShaderPBR.setUniform("shadowMapTexID", 1);
+	m_modelShaderPBR.setUniform("shadowNoiseTexID", 2);
+	m_modelShaderPBR.setUniform("irradianceTexID", 4);
+	m_modelShaderPBR.setUniform("prefilterTexID", 5);
+	m_modelShaderPBR.setUniform("brdfLUTTexID", 6);
 	m_modelShaderPBR.setUniform("lightDir", m_lightDir);
 	m_modelShaderPBR.setUniform("lightCol", m_lightColorPBR);
 	m_modelShaderPBR.setUniform("texelSize", 1.0f / m_shadowMapResolution);
 	m_modelShaderPBR.setUniform("shadowNoiseWindowSize", m_shadowNoiseWindowSize);
 	m_modelShaderPBR.setUniform("shadowNoiseFilterSize", m_shadowNoiseFilterSize);
+	m_modelShaderPBR.setUniform("maxLOD", m_numMipLevels - 1.0f);
 
 	m_skyboxShader.activate();
-	m_skyboxShader.setUniform("fSunlightIntensity", m_sunlightIntensityPBR);
+	m_skyboxShader.setUniform("skybox", 3);
 
 	m_postProcessingShader.activate();
+	m_postProcessingShader.setUniform("fTexID", 0);
 	m_postProcessingShader.setUniform("fGamma", 2.2f);
-	m_postProcessingShader.setUniform("fSunlightIntensity", m_sunlightIntensityPBR);
+	m_postProcessingShader.setUniform("fWhiteLevel", 5.0f);
 
 	m_msaaBuffer.attatchTexture(GL_COLOR_ATTACHMENT0, GL_RGB16F);
 	m_msaaBuffer.attatchRenderBuffer(GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT);
@@ -57,6 +62,7 @@ Renderer::Renderer(int width, int height, const char* modelPath) :
 
 	m_postprocessingBuffer.attatchTexture(GL_COLOR_ATTACHMENT0, GL_RGB16F);
 
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_CULL_FACE);
@@ -110,7 +116,7 @@ void Renderer::renderUI() {
 	ImGui::SliderFloat("Roll", &m_modelRoll, -360.0f, 360.0f);
 	ImGui::SliderFloat("Scale", &m_modelScale, 0.01f, 100.0f);
 	ImGui::Text("Graphics Settings");
-	ImGui::Checkbox("PBR", &m_pbrEnabled);
+	ImGui::Checkbox("IBL", &m_iblEnabled);
 	ImGui::SameLine();
 	ImGui::Checkbox("VSync", &m_vsyncEnabled);
 	ImGui::Text("Performance");
@@ -173,23 +179,15 @@ void Renderer::depthPass(glm::mat4 transform) {
 
 void Renderer::lightingPass(glm::mat4 transform, glm::mat4 lightMatrix) {
 	
-	m_shadowMapBuffer.bindTexture(0, 0);
+	m_shadowMapBuffer.bindTexture(0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDepthFunc(GL_EQUAL);
-	if (m_pbrEnabled) {
-		m_modelShaderPBR.activate();
-		m_modelShaderPBR.setUniform("lightMatrix", lightMatrix);
-		m_modelShaderPBR.setUniform("camMatrix", m_camera.getProjMatrix(m_fov, m_nearPlane, m_farPlane) * m_camera.getViewMatrix());
-		m_modelShaderPBR.setUniform("camPos", m_camera.getPos());
-		m_model.draw(m_modelShaderPBR, transform);
-	}
-	else {
-		m_modelShaderBlinnPhong.activate();
-		m_modelShaderBlinnPhong.setUniform("lightMatrix", lightMatrix);
-		m_modelShaderBlinnPhong.setUniform("camMatrix", m_camera.getProjMatrix(m_fov, m_nearPlane, m_farPlane) * m_camera.getViewMatrix());
-		m_modelShaderBlinnPhong.setUniform("camPos", m_camera.getPos());
-		m_model.draw(m_modelShaderBlinnPhong, transform);
-	}
+	m_modelShaderPBR.activate();
+	m_modelShaderPBR.setUniform("lightMatrix", lightMatrix);
+	m_modelShaderPBR.setUniform("camMatrix", m_camera.getProjMatrix(m_fov, m_nearPlane, m_farPlane) * m_camera.getViewMatrix());
+	m_modelShaderPBR.setUniform("camPos", m_camera.getPos());
+	m_modelShaderPBR.setUniform("iblEnabled", (int)m_iblEnabled);
+	m_model.draw(m_modelShaderPBR, transform);
 	m_skyboxShader.activate();
 	m_skyboxShader.setUniform("camMatrix", m_camera.getProjMatrix(m_fov, m_nearPlane, m_farPlane) * glm::mat4(glm::mat3(m_camera.getViewMatrix())));
 	m_skybox.draw(m_skyboxShader);

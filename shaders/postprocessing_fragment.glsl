@@ -5,7 +5,7 @@ out vec3 FragColor;
 
 uniform sampler2D fTexID;
 uniform float fGamma;
-uniform float fSunlightIntensity;
+uniform float fWhiteLevel;
 
 vec3 toneMap(vec3 inputVal, float whiteLevel) {
 	float oldLuminance = dot(inputVal, vec3(0.212f, 0.7152f, 0.0722f));
@@ -17,7 +17,8 @@ vec3 gammaCorrect(vec3 inputVal) {
 }
 
 void main() {
-	FragColor = texture(fTexID, fTexCoord).rgb;
-	FragColor = toneMap(FragColor, fSunlightIntensity);
-	FragColor = gammaCorrect(FragColor);
+	vec3 color = texture(fTexID, fTexCoord).rgb;
+	color = toneMap(color, fWhiteLevel);
+	color = gammaCorrect(color);
+	FragColor = color;
 }
