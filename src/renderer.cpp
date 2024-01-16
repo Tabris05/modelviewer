@@ -27,7 +27,7 @@ Renderer::Renderer(int width, int height, const char* modelPath) :
 	m_shadowMapBuffer { m_shadowMapResolution, m_shadowMapResolution},
 	m_shadowNoise{ m_shadowNoiseWindowSize, m_shadowNoiseFilterSize },
 	m_postprocessingBuffer{ width, height },
-	m_camera{ width, height, glm::vec3(-0.75f, 1.0f, -1.5f), /*glm::vec3(0.5f, -0.35f, 1.0f)*/ glm::vec3(0.5f, -0.75f, 1.0f)} {
+	m_camera{ width, height, glm::vec3(-0.75f, 1.0f, -1.5f), glm::vec3(0.5f, -0.5f, 1.0f)} {
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(m_window, true);
@@ -116,7 +116,7 @@ void Renderer::renderUI() {
 	ImGui::SliderFloat("Roll", &m_modelRoll, -360.0f, 360.0f);
 	ImGui::SliderFloat("Scale", &m_modelScale, 0.01f, 100.0f);
 	ImGui::Text("Graphics Settings");
-	ImGui::Checkbox("IBL", &m_iblEnabled);
+	ImGui::Checkbox("Specular AA", &m_specAA);
 	ImGui::SameLine();
 	ImGui::Checkbox("VSync", &m_vsyncEnabled);
 	ImGui::Text("Performance");
@@ -186,7 +186,7 @@ void Renderer::lightingPass(glm::mat4 transform, glm::mat4 lightMatrix) {
 	m_modelShaderPBR.setUniform("lightMatrix", lightMatrix);
 	m_modelShaderPBR.setUniform("camMatrix", m_camera.getProjMatrix(m_fov, m_nearPlane, m_farPlane) * m_camera.getViewMatrix());
 	m_modelShaderPBR.setUniform("camPos", m_camera.getPos());
-	m_modelShaderPBR.setUniform("iblEnabled", (int)m_iblEnabled);
+	m_modelShaderPBR.setUniform("specAA", (int)m_specAA);
 	m_model.draw(m_modelShaderPBR, transform);
 	m_skyboxShader.activate();
 	m_skyboxShader.setUniform("camMatrix", m_camera.getProjMatrix(m_fov, m_nearPlane, m_farPlane) * glm::mat4(glm::mat3(m_camera.getViewMatrix())));

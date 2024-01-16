@@ -71,21 +71,21 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Users\aidan_g7nrypx\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\aidan_g7nrypx\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\Users\aidan_g7nrypx\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\aidan_g7nrypx\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
     <SourcePath>$(ProjectDir)\src</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\aidan\Documents\Workspace\Visual Studio\LearningOpenGL\LearningOpenGL\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
     <SourcePath>$(ProjectDir)\src</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

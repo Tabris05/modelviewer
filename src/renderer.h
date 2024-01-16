@@ -49,7 +49,7 @@ private:
 	constexpr static glm::vec3 m_lightColorPBR{ glm::vec3(0.98f, 0.90f, 0.74f) * 5.0f };
 
 	float m_modelPitch = 0.0f, m_modelRoll = 0.0f, m_modelYaw = 0.0f, m_modelScale = 1.0f;
-	bool m_iblEnabled = true, m_vsyncEnabled = true;
+	bool m_specAA = false, m_vsyncEnabled = true;
 	double m_lastFrame = 0.0, m_curFrame = 0.0;
 
 	void beginFrame();
