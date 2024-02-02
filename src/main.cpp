@@ -19,7 +19,7 @@ int main() {
 	std::filesystem::current_path(executablePath.substr(0, executablePath.find_last_of('\\')));
 	constexpr int windowW = 1280, windowH = 720;
 #else
-	const char* modelPath = "models\\robot\\scene.gltf";
+	const char* modelPath = "models\\pavilion\\scene.gltf";
 	constexpr int windowW = 1920, windowH = 1080;
 #endif
 	Renderer(windowW, windowH, modelPath).run();

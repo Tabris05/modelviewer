@@ -11,6 +11,7 @@ uniform samplerCube irradianceTexID;
 uniform samplerCube prefilterTexID;
 uniform sampler2D brdfLUTTexID;
 uniform sampler2D diffuseTexID;
+uniform sampler2D emissiveTexID;
 uniform sampler2D normalTexID;
 uniform sampler2D aoTexID;
 uniform sampler2D metalnessTexID;
@@ -20,6 +21,7 @@ uniform sampler3D shadowNoiseTexID;
 
 uniform vec3 lightCol;
 uniform vec3 meshColor;
+uniform vec3 meshEmission;
 uniform vec3 lightDir;
 uniform vec3 camPos;
 uniform float texelSize;
@@ -29,9 +31,11 @@ uniform int shadowNoiseFilterSize;
 uniform float meshAO;
 uniform float meshMetalness;
 uniform float meshRoughness;
+uniform float emissiveIntensity;
 uniform float maxLOD;
 
 uniform bool hasDiffuse;
+uniform bool hasEmissive;
 uniform bool hasNormal;
 uniform bool hasAO;
 uniform bool hasMetalness;
@@ -62,14 +66,6 @@ float inShadow() {
 		}
 	}
 	return 1.0f - (result / (shadowNoiseFilterSize * shadowNoiseFilterSize));
-}
-
-float antialias(vec3 normal, float roughnessSquared) {
-	const float SIGMA2 = 0.15915494f;
-	const float KAPPA = 0.18f;
-	vec3 ddu = dFdx(normal);
-	vec3 ddv = dFdy(normal);
-	return clamp(roughnessSquared + min(SIGMA2 * (dot(ddu, ddu) + dot(ddv, ddv)), KAPPA), 0.0f, 1.0f);
 }
 
 float distributionGGX(vec3 normal, vec3 halfway, float alpha) {
@@ -107,10 +103,10 @@ vec3 directionalLight(vec3 albedo) {
 	vec3 viewDir = normalize(camPos - fFragPos);
 	vec3 lightDir = -normalize(lightDir);
 	vec3 halfway = normalize(viewDir + lightDir);
-	vec3 f0 = mix(vec3(0.04), albedo, metalness);
+	vec3 f0 = mix(vec3(0.04f), albedo, metalness);
 
 	// directional light
-	float distribution = distributionGGX(normal, halfway, specAA ? antialias(normal, roughness * roughness) : roughness * roughness);
+	float distribution = distributionGGX(normal, halfway, roughness * roughness); // contributes to specular aliasing
 	float geometry = geometrySmith(normal, viewDir, lightDir, roughness);
 	vec3 fresnel = fresnelSchlick(max(dot(halfway, viewDir), 0.0f), f0);
 
@@ -123,9 +119,9 @@ vec3 directionalLight(vec3 albedo) {
 	vec3 prefilteredColor = textureLod(prefilterTexID, reflect(-viewDir, normal), roughness * maxLOD).rgb;
 	vec2 brdf = texture(brdfLUTTexID, vec2(max(dot(normal, viewDir), 0.0f), roughness)).rg;
 	vec3 ambientDiffuse = kD * texture(irradianceTexID, normal).rgb * albedo;
-	vec3 ambientSpecular = prefilteredColor * (F * brdf.x + brdf.y);
+	vec3 ambientSpecular = prefilteredColor * (F * brdf.x + brdf.y); // contributes to specular aliasing
 	vec3 ambient = (ambientDiffuse + ambientSpecular) * ao;
-	return (diffuse + specular) * lightCol * max(dot(normal, lightDir), 0.0f) * inShadow() + ambient;
+	return (diffuse + specular) * lightCol * max(dot(normal, lightDir), 0.0f) * inShadow() + ambient + (hasEmissive ? texture(emissiveTexID, fTexCoord).rgb : meshEmission) * emissiveIntensity;
 }
 
 void main() {

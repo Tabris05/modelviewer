@@ -19,7 +19,7 @@ public:
 	using NormalData = std::optional<Texture>;
 private:
 	size_t m_numIndices;
-	ColorData m_diffuse;
+	ColorData m_diffuse, m_emission;
 	NormalData m_normal;
 	MaterialData m_ao, m_metalness, m_roughness;
 
@@ -27,8 +27,10 @@ private:
 	VertexBuffer m_vBuf;
 	IndexBuffer m_iBuf;
 
+	float m_emissiveIntensity;
+
 public:
-	Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, ColorData diffuse, NormalData normal, MaterialData ao, MaterialData metalness, MaterialData roughness);
+	Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, ColorData diffuse, ColorData emission, float emissiveIntensity, NormalData normal, MaterialData ao, MaterialData metalness, MaterialData roughness);
 
 	void bindTextures(ShaderProgram& shaderProgram);
 

@@ -67,8 +67,6 @@ Renderer::Renderer(int width, int height, const char* modelPath) :
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(10.0f, 1.0f);
 }
 
 void Renderer::run() {
@@ -155,13 +153,15 @@ glm::mat4 Renderer::calcLightMatrix(glm::mat4 transform) {
 void Renderer::shadowPass(glm::mat4 transform, glm::mat4 lightMatrix) {
 	glDepthMask(GL_TRUE);
 	glDepthFunc(GL_LESS);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1.0f, 1.0f);
 	m_modelShaderDepth.activate();
 	m_modelShaderDepth.setUniform("camMatrix", lightMatrix);
 	glViewport(0, 0, m_shadowMapResolution, m_shadowMapResolution);
 	m_shadowMapBuffer.bind();
 	glClear(GL_DEPTH_BUFFER_BIT);
 	m_model.draw(m_modelShaderDepth, transform);
-
+	glDisable(GL_POLYGON_OFFSET_FILL);
 	glViewport(0, 0, m_width, m_height);
 }
 

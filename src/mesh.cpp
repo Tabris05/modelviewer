@@ -5,8 +5,9 @@
 #include <string>
 #include <glm/gtc/type_ptr.hpp>
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, ColorData diffuse, NormalData normal, MaterialData ao, MaterialData metalness, MaterialData roughness) :
-	m_numIndices{ indices.size() }, m_vBuf{ std::move(vertices) }, m_iBuf{ std::move(indices) }, m_diffuse{ std::move(diffuse) }, m_normal{ std::move(normal) }, m_ao{ std::move(ao) }, m_metalness{ std::move(metalness) }, m_roughness{ std::move(roughness) } {
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, ColorData diffuse, ColorData emission, float emissiveIntensity, NormalData normal, MaterialData ao, MaterialData metalness, MaterialData roughness) :
+	m_numIndices{ indices.size() }, m_vBuf{ std::move(vertices) }, m_iBuf{ std::move(indices) }, m_diffuse{ std::move(diffuse) }, m_emission{ std::move(emission) },
+	m_emissiveIntensity { emissiveIntensity }, m_normal { std::move(normal) }, m_ao{ std::move(ao) }, m_metalness{ std::move(metalness) }, m_roughness{ std::move(roughness) } {
 	GLuint slot = 0;
 	m_vArr.linkAttribute(m_vBuf, slot++, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, m_pos));
 	m_vArr.linkAttribute(m_vBuf, slot++, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, m_normal));
@@ -29,6 +30,18 @@ void Mesh::bindTextures(ShaderProgram& shaderProgram) {
 			shaderProgram.setUniform("hasDiffuse", 0);
 		}
 	}, m_diffuse);
+
+	std::visit(overload{
+		[&shaderProgram](Texture& map) {
+			map.bind();
+			shaderProgram.setUniform("emissiveTexID", map.getSlot());
+			shaderProgram.setUniform("hasEmissive", 1);
+		},
+		[&shaderProgram](glm::vec3 value) {
+			shaderProgram.setUniform("meshEmission", value);
+			shaderProgram.setUniform("hasEmissive", 0);
+		}
+	}, m_emission);
 
 	std::visit(overload{
 		[&shaderProgram](Texture& map) {
@@ -86,6 +99,8 @@ void Mesh::bindTextures(ShaderProgram& shaderProgram) {
 	else {
 		shaderProgram.setUniform("hasNormal", 0);
 	}
+
+	shaderProgram.setUniform("emissiveIntensity", m_emissiveIntensity);
 }
 
 void Mesh::draw(ShaderProgram& shaderProgram, glm::mat4 model) {
