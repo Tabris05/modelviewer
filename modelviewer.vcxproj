@@ -155,11 +155,27 @@
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="lib\glad.c" />
     <ClCompile Include="lib\stb.c" />
+    <ClCompile Include="src\indexbuffer.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\refcounter.cpp" />
     <ClCompile Include="src\renderer.cpp" />
+    <ClCompile Include="src\shader.cpp" />
+    <ClCompile Include="src\vertexarray.cpp" />
+    <ClCompile Include="src\vertexbuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\dbg.h" />
+    <ClInclude Include="src\indexbuffer.h" />
+    <ClInclude Include="src\refcounter.h" />
     <ClInclude Include="src\renderer.h" />
+    <ClInclude Include="src\shader.h" />
+    <ClInclude Include="src\vertex.h" />
+    <ClInclude Include="src\vertexarray.h" />
+    <ClInclude Include="src\vertexbuffer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\tri_frag.glsl" />
+    <None Include="shaders\tri_vert.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
