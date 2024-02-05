@@ -49,7 +49,7 @@ void Shader::setUniform(const char* uniform, float value) {
 
 template<typename T>
 void Shader::setUniform(const char* uniform, T value) {
-	log("passed a type to set uniform for which no overload exists");
+	print("passed a type to set uniform for which no overload exists");
 }
 
 Shader Shader::make(const char* vsPath, const char* fsPath) {
@@ -81,7 +81,7 @@ Shader Shader::make(const char* vsPath, const char* fsPath) {
 	glDeleteShader(vsID);
 	glDeleteShader(fsID);
 
-	return Shader(id);
+	return Shader{ id };
 }
 
 Shader::~Shader() {

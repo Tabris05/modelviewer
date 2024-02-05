@@ -69,6 +69,9 @@
     <ClCompile Include="src\shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h">
@@ -95,12 +98,15 @@
     <ClInclude Include="src\dbg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\tri_vert.glsl">
+    <None Include="shaders\model_vert.glsl">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="shaders\tri_frag.glsl">
+    <None Include="shaders\model_frag.glsl">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

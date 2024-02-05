@@ -2,15 +2,16 @@
 #define DBG_H
 
 #ifdef NDEBUG
-	#define log(x)
+	#define print(x)
 	#define checkErr()
 	#define checkCompile(x)
+	#define validatePath(x)
 #else
 	#include <iostream>
 	#include <iomanip>
 	#include <filesystem>
-	#define log(x) std::cout << x << '\n'
-	#define checkErr() for (GLenum glErr = glGetError(); glErr != 0; glErr = glGetError()) log(std::hex << glErr)
+	#define print(x) std::cout << x << '\n'
+	#define checkErr() for (GLenum glErr = glGetError(); glErr != 0; glErr = glGetError()) std::cout << std::hex << glErr << "\n";
 	#define checkCompile(shader) {\
 		GLint success = 0;\
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);\
@@ -23,8 +24,8 @@
 			delete[] buf;\
 		}\
 	}
-	#define validatePath(path) {\
-		if(!std::filesystem::exists(path)) std::cout << "Error: path " << path << " does not exist!\n";\
+	#define validatePath(x) {\
+		if(!std::filesystem::exists(x)) std::cout << "Error: path " << x << " does not exist!\n";\
 	}
 #endif
 

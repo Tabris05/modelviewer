@@ -5,19 +5,9 @@
 #include "dbg.h"
 
 void Renderer::run() {
-	std::vector<Vertex> vertices{
-		Vertex{ glm::vec3(-0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f) },
-		Vertex{ glm::vec3(0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f) },
-		Vertex{ glm::vec3(0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f) }
-	};
 
-	Shader triShader = Shader::make("shaders/tri_vert.glsl", "shaders/tri_frag.glsl");
-	VertexBuffer vBuf = VertexBuffer::make(vertices);
-	VertexArray vArr = VertexArray::make();
-	vArr.linkVertexBuffer(vBuf, sizeof(Vertex));
-	vArr.linkAttribute(0, 3, GL_FLOAT, 0);
-	vArr.bind();
-	triShader.bind();
+	Shader modelShader = Shader::make("shaders/model_vert.glsl", "shaders/model_frag.glsl");
+	modelShader.bind();
 
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
@@ -44,7 +34,12 @@ Renderer Renderer::make() {
 	gladLoadGL();
 	glViewport(0, 0, width, height);
 
-	return Renderer{ window, width, height };
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(-1);
+
+	Model model = Model::make("model/scene.gltf");
+
+	return Renderer{ window, width, height, std::move(model) };
 }
 
 Renderer::~Renderer() {
@@ -52,13 +47,8 @@ Renderer::~Renderer() {
 	glfwTerminate();
 }
 
-Renderer::Renderer(GLFWwindow* window, int width, int height) : m_window{ window }, m_width{ width }, m_height{ height } {
-	glfwSetWindowUserPointer(window, this);
-	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* window, int x, int y) { static_cast<Renderer*>(glfwGetWindowUserPointer(window))->resizeWindow(x, y); });
-}
-
 void Renderer::draw() {
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	m_model.draw();
 	glfwSwapBuffers(m_window);
 }
 
@@ -68,3 +58,9 @@ void Renderer::resizeWindow(int width, int height) {
 	glViewport(0, 0, width, height);
 	draw();
 }
+
+Renderer::Renderer(GLFWwindow* window, int width, int height, Model model) : m_window{ window }, m_width{ width }, m_height{ height }, m_model{ std::move(model) } {
+	glfwSetWindowUserPointer(window, this);
+	glfwSetFramebufferSizeCallback(m_window, [] (GLFWwindow* window, int x, int y) { static_cast<Renderer*>(glfwGetWindowUserPointer(window))->resizeWindow(x, y); });
+}
+

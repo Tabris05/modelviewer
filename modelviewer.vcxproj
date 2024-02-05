@@ -116,7 +116,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)/lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;fastgltf_simdjson.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;fastgltf_dbg.lib;simdjson_dbg.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -142,7 +142,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)/lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;fastgltf_simdjson.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;fastgltf.lib;simdjson.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -157,6 +157,7 @@
     <ClCompile Include="lib\stb.c" />
     <ClCompile Include="src\indexbuffer.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\refcounter.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\shader.cpp" />
@@ -166,6 +167,7 @@
   <ItemGroup>
     <ClInclude Include="src\dbg.h" />
     <ClInclude Include="src\indexbuffer.h" />
+    <ClInclude Include="src\model.h" />
     <ClInclude Include="src\refcounter.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\shader.h" />
@@ -174,8 +176,8 @@
     <ClInclude Include="src\vertexbuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\tri_frag.glsl" />
-    <None Include="shaders\tri_vert.glsl" />
+    <None Include="shaders\model_frag.glsl" />
+    <None Include="shaders\model_vert.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
