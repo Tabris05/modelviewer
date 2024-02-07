@@ -5,23 +5,26 @@
 #include "vertexbuffer.h"
 #include "indexbuffer.h"
 #include "vertexarray.h"
+#include "commandbuffer.h"
+#include "aabb.h"
 
 class Model {
 	public:
+		const AABB m_aabb;
+		const glm::mat4 m_baseTransform;
+
 		void draw();
 
 		static Model make(const char* pathStr = nullptr);
 
 	private:
-		Model(VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, GLuint numIndices);
-
-		static void processNode(const fastgltf::Asset& asset, size_t index, glm::mat4 transform, std::vector<Vertex>& vertices, std::vector<GLuint>& indices);
+		Model(CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb);
 
 		static inline fastgltf::Parser m_parser;
+		CommandBuffer m_cmdBuf;
 		VertexBuffer m_vBuf;
 		IndexBuffer m_iBuf;
 		VertexArray m_vArr;
-		GLuint m_numIndices;
 };
 
 #endif

@@ -12,11 +12,12 @@
 
 void Model::draw() {
 	m_vArr.bind();
-	glDrawElements(GL_TRIANGLES, m_numIndices, GL_UNSIGNED_INT, NULL);
+	m_cmdBuf.bind();
+	glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
 }
 
 Model Model::make(const char* pathStr) {
-	if (!pathStr) return Model{ VertexBuffer::make(std::vector<Vertex>{}), IndexBuffer::make(std::vector<GLuint>{}), VertexArray::make(), 0 };
+	//if (!pathStr) return Model{ VertexBuffer::make(std::vector<Vertex>{}), IndexBuffer::make(std::vector<GLuint>{}), VertexArray::make(), 0, glm::mat4{ 1.0f }, AABB{} };
 
 	const std::filesystem::path path(pathStr);
 	fastgltf::GltfDataBuffer data;
@@ -36,57 +37,89 @@ Model Model::make(const char* pathStr) {
 	vertices.reserve(verticesSize);
 	indices.reserve(indicesSize);
 
+	std::vector<DrawCommand> cmds;
+
+	AABB aabb{};
+
+	auto processNode = [&asset, &vertices, &indices, &cmds, &aabb](this auto& self, size_t index, glm::mat4 transform) -> void {
+		const fastgltf::Node& curNode = asset.nodes[index];
+		transform *= std::visit(fastgltf::visitor{
+			[](fastgltf::Node::TransformMatrix matrix) {
+				return glm::make_mat4(matrix.data());
+			},
+			[](fastgltf::Node::TRS trs) {
+				return glm::translate(glm::mat4{ 1.0f }, glm::make_vec3(trs.translation.data()))
+				* glm::toMat4(glm::make_quat(trs.rotation.data()))
+				* glm::scale(glm::mat4{ 1.0f }, glm::make_vec3(trs.scale.data()));
+			}
+			}, curNode.transform);
+
+		if (curNode.meshIndex.has_value()) {
+			const fastgltf::Mesh& curMesh = asset.meshes[curNode.meshIndex.value()];
+			for (const fastgltf::Primitive& curPrimitive : curMesh.primitives) {
+				size_t oldVerticesSize = vertices.size();
+				size_t oldIndicesSize = indices.size();
+
+				const fastgltf::Accessor& positionAccessor = asset.accessors[curPrimitive.findAttribute("POSITION")->second];
+				fastgltf::iterateAccessor<glm::vec3>(asset, positionAccessor, [&vertices, &aabb, transform](glm::vec3 pos) {
+					glm::vec3 vertex = glm::vec3(transform * glm::vec4(pos, 1.0f));
+					aabb.m_min = glm::min(aabb.m_min, vertex);
+					aabb.m_max = glm::max(aabb.m_max, vertex);
+					vertices.emplace_back(vertex);
+				});
+				const fastgltf::Accessor& indexAccessor = asset.accessors[curPrimitive.indicesAccessor.value()];
+				fastgltf::iterateAccessor<GLuint>(asset, indexAccessor, [&indices](GLuint index) {
+					indices.emplace_back(index);
+				});
+				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, 0);
+			}
+		}
+		for (size_t i : curNode.children) self(i, transform);
+	};
+
 	for (size_t i : asset.scenes[asset.defaultScene.value_or(0)].nodeIndices) {
 		glm::mat4 transform{ 1.0f };
-		processNode(asset, i, transform, vertices, indices);
+		processNode(i, transform);
 	}
 
+	CommandBuffer cmdBuf = CommandBuffer::make(cmds);
 	VertexBuffer vBuf = VertexBuffer::make(vertices);
 	IndexBuffer iBuf = IndexBuffer::make(indices);
 	VertexArray vArr = VertexArray::make();
+	
 
 	vArr.linkVertexBuffer(vBuf, sizeof(Vertex));
 	vArr.linkIndexBuffer(iBuf);
 	vArr.linkAttribute(0, 3, GL_FLOAT, 0);
 
-	return Model{ std::move(vBuf), std::move(iBuf), std::move(vArr), static_cast<GLuint>(indices.size()) };
-}
-
-Model::Model(VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, GLuint numIndices) : m_vBuf{ std::move(vBuf) }, m_iBuf{ std::move(iBuf) }, m_vArr{ std::move(vArr) }, m_numIndices{ numIndices } {}
-
-void Model::processNode(const fastgltf::Asset& asset, size_t index, glm::mat4 transform, std::vector<Vertex>&vertices, std::vector<GLuint>& indices) {
-	const fastgltf::Node& curNode = asset.nodes[index];
-	transform *= std::visit(fastgltf::visitor{
-		[](fastgltf::Node::TransformMatrix matrix) {
-			return glm::make_mat4(matrix.data());
-		},
-		[](fastgltf::Node::TRS trs) {
-			return glm::translate(glm::mat4{ 1.0f }, glm::make_vec3(trs.translation.data()))
-			* glm::toMat4(glm::make_quat(trs.rotation.data()))
-			* glm::scale(glm::mat4{ 1.0f }, glm::make_vec3(trs.scale.data()));
-		}
-	}, curNode.transform);
-	
-	struct S {};
-
-	if (curNode.meshIndex.has_value()) {
-		const fastgltf::Mesh& curMesh = asset.meshes[curNode.meshIndex.value()];
-		for (const fastgltf::Primitive& curPrimitive : curMesh.primitives) {
-			size_t indexOffset = vertices.size();
-
-			const fastgltf::Accessor& positionAccessor = asset.accessors[curPrimitive.findAttribute("POSITION")->second];
-			fastgltf::iterateAccessor<glm::vec3>(asset, positionAccessor, [&vertices, transform] (glm::vec3 pos) {
-				vertices.emplace_back(glm::vec3(transform * glm::vec4(pos, 1.0f)));
-			});
-
-			const fastgltf::Accessor& indexAccessor = asset.accessors[curPrimitive.indicesAccessor.value()];
-			fastgltf::iterateAccessor<GLuint>(asset, indexAccessor, [&indices, indexOffset] (GLuint index) {
-				indices.emplace_back(index + indexOffset);
-			});
-
-			indices.emplace_back(-1);
-		}
+	glm::vec3 size = aabb.m_max - aabb.m_min;
+	float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
+	glm::mat4 baseTransform = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	baseTransform = glm::scale(baseTransform, glm::vec3(scale));
+	glm::vec3 corners[8] = {
+		glm::vec3(aabb.m_min.x, aabb.m_min.y, aabb.m_min.z),
+		glm::vec3(aabb.m_max.x, aabb.m_min.y, aabb.m_min.z),
+		glm::vec3(aabb.m_max.x, aabb.m_max.y, aabb.m_min.z),
+		glm::vec3(aabb.m_min.x, aabb.m_max.y, aabb.m_min.z),
+		glm::vec3(aabb.m_min.x, aabb.m_min.y, aabb.m_max.z),
+		glm::vec3(aabb.m_max.x, aabb.m_min.y, aabb.m_max.z),
+		glm::vec3(aabb.m_max.x, aabb.m_max.y, aabb.m_max.z),
+		glm::vec3(aabb.m_min.x, aabb.m_max.y, aabb.m_max.z),
+	};
+	for (glm::vec3& i : corners) i = glm::vec3(baseTransform * glm::vec4(i, 1.0f));
+	aabb = AABB{};
+	for (glm::vec3 i : corners) {
+		aabb.m_min = glm::min(aabb.m_min, i);
+		aabb.m_max = glm::max(aabb.m_max, i);
 	}
 
-	for (size_t i : curNode.children) processNode(asset, i, transform, vertices, indices);
+	return Model{ std::move(cmdBuf), std::move(vBuf), std::move(iBuf), std::move(vArr), baseTransform, aabb};
 }
+
+Model::Model(CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb) :
+	m_cmdBuf{ std::move(cmdBuf) },
+	m_vBuf{ std::move(vBuf) },
+	m_iBuf{ std::move(iBuf) },
+	m_vArr{ std::move(vArr) },
+	m_baseTransform{ baseTransform },
+	m_aabb{ aabb } {}
