@@ -31,7 +31,7 @@ Model Model::make(const char* pathStr) {
 	for (const fastgltf::Mesh curMesh : asset.meshes) {
 		for (size_t i = 0; i < curMesh.primitives.size(); i++) {
 			verticesSize += asset.accessors[curMesh.primitives[i].findAttribute("POSITION")->second].count;
-			indicesSize += asset.accessors[curMesh.primitives[i].indicesAccessor.value()].count + 1;
+			indicesSize += asset.accessors[curMesh.primitives[i].indicesAccessor.value()].count;
 		}
 	}
 	vertices.reserve(verticesSize);
@@ -52,7 +52,7 @@ Model Model::make(const char* pathStr) {
 				* glm::toMat4(glm::make_quat(trs.rotation.data()))
 				* glm::scale(glm::mat4{ 1.0f }, glm::make_vec3(trs.scale.data()));
 			}
-			}, curNode.transform);
+		}, curNode.transform);
 
 		if (curNode.meshIndex.has_value()) {
 			const fastgltf::Mesh& curMesh = asset.meshes[curNode.meshIndex.value()];
@@ -113,7 +113,7 @@ Model Model::make(const char* pathStr) {
 		aabb.m_max = glm::max(aabb.m_max, i);
 	}
 
-	return Model{ std::move(cmdBuf), std::move(vBuf), std::move(iBuf), std::move(vArr), baseTransform, aabb};
+	return Model{ std::move(cmdBuf), std::move(vBuf), std::move(iBuf), std::move(vArr), baseTransform, aabb };
 }
 
 Model::Model(CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb) :
