@@ -24,6 +24,7 @@ void VertexArray::linkVertexBuffer(const VertexBuffer& vBuf, GLsizei stride) {
 
 void VertexArray::linkAttribute(GLuint location, GLuint numComponents, GLenum type, GLuint offset) {
 	glEnableVertexArrayAttrib(m_id, location);
+	glVertexArrayAttribBinding(m_id, location, 0);
 	glVertexArrayAttribFormat(m_id, location, numComponents, type, GL_FALSE, offset);
 }
 

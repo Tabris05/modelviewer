@@ -8,6 +8,7 @@ class Camera {
 	public:
 		glm::mat4 getProjMatrix(float fovDeg, float nearPlane, float farPlane) const;
 		glm::mat4 getViewMatrix() const;
+		glm::vec3 getPos() const;
 		void handleInput(float deltaTime);
 		void updateSize(int width, int height);
 

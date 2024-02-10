@@ -7,9 +7,15 @@
 glm::mat4 Camera::getProjMatrix(float fovDeg, float nearPlane, float farPlane) const {
 	return glm::perspective(glm::radians(fovDeg), (float)m_width / (float)m_height, nearPlane, farPlane);
 }
+
 glm::mat4 Camera::getViewMatrix() const {
 	return glm::lookAt(m_position, m_position + m_rotation, glm::vec3{ 0.0f, 1.0f, 0.0f });
 }
+
+glm::vec3 Camera::getPos() const {
+	return m_position;
+}
+
 void Camera::handleInput(float deltaTime) {
 	if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS) {
 		m_position += m_speed * m_rotation * glm::vec3{ deltaTime };

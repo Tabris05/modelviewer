@@ -55,6 +55,7 @@ Model Model::make(const char* pathStr) {
 		}, curNode.transform);
 
 		if (curNode.meshIndex.has_value()) {
+			const glm::mat4 normalTransform = glm::transpose(glm::inverse(transform));
 			const fastgltf::Mesh& curMesh = asset.meshes[curNode.meshIndex.value()];
 			for (const fastgltf::Primitive& curPrimitive : curMesh.primitives) {
 				size_t oldVerticesSize = vertices.size();
@@ -67,10 +68,22 @@ Model Model::make(const char* pathStr) {
 					aabb.m_max = glm::max(aabb.m_max, vertex);
 					vertices.emplace_back(vertex);
 				});
+
+				const fastgltf::Accessor& normalAccessor = asset.accessors[curPrimitive.findAttribute("NORMAL")->second];
+				fastgltf::iterateAccessorWithIndex<glm::vec3>(asset, normalAccessor, [&vertices, oldVerticesSize, normalTransform](glm::vec3 normal, size_t index) {
+					vertices[index + oldVerticesSize].m_normal = glm::normalize(glm::vec3(normalTransform * glm::vec4(normal, 0.0f)));
+				});
+
+				const fastgltf::Accessor& uvAccessor = asset.accessors[curPrimitive.findAttribute("TEXCOORD_0")->second];
+				fastgltf::iterateAccessorWithIndex<glm::vec2>(asset, uvAccessor, [&vertices, oldVerticesSize](glm::vec2 uv, size_t index) {
+					vertices[index + oldVerticesSize].m_uv = uv;
+				});
+
 				const fastgltf::Accessor& indexAccessor = asset.accessors[curPrimitive.indicesAccessor.value()];
 				fastgltf::iterateAccessor<GLuint>(asset, indexAccessor, [&indices](GLuint index) {
 					indices.emplace_back(index);
 				});
+
 				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, 0);
 			}
 		}
@@ -90,7 +103,9 @@ Model Model::make(const char* pathStr) {
 
 	vArr.linkVertexBuffer(vBuf, sizeof(Vertex));
 	vArr.linkIndexBuffer(iBuf);
-	vArr.linkAttribute(0, 3, GL_FLOAT, 0);
+	vArr.linkAttribute(0, 3, GL_FLOAT, offsetof(Vertex, m_position));
+	vArr.linkAttribute(1, 3, GL_FLOAT, offsetof(Vertex, m_normal));
+	vArr.linkAttribute(2, 2, GL_FLOAT, offsetof(Vertex, m_uv));
 
 	glm::vec3 size = aabb.m_max - aabb.m_min;
 	float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));

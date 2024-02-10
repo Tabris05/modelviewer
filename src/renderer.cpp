@@ -52,7 +52,9 @@ Renderer::~Renderer() {
 
 void Renderer::draw() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	m_modelShader.setUniform("transform", m_camera.getProjMatrix(90.0f, 0.1f, 100.0f) * m_camera.getViewMatrix() * m_model.m_baseTransform);
+	m_modelShader.setUniform("camMatrix", m_camera.getProjMatrix(90.0f, 0.1f, 100.0f) * m_camera.getViewMatrix());
+	m_modelShader.setUniform("modelMatrix", m_model.m_baseTransform);
+	m_modelShader.setUniform("camPos", m_camera.getPos());
 	m_model.draw();
 	glfwSwapBuffers(m_window);
 }
