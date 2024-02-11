@@ -6,6 +6,7 @@
 #include "indexbuffer.h"
 #include "vertexarray.h"
 #include "commandbuffer.h"
+#include "shaderstoragebuffer.h"
 #include "aabb.h"
 
 class Model {
@@ -18,9 +19,10 @@ class Model {
 		static Model make(const char* pathStr = nullptr);
 
 	private:
-		Model(CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb);
+		Model(ShaderStorageBuffer materialBuf, CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb);
 
 		static inline fastgltf::Parser m_parser;
+		ShaderStorageBuffer m_materialBuf;
 		CommandBuffer m_cmdBuf;
 		VertexBuffer m_vBuf;
 		IndexBuffer m_iBuf;

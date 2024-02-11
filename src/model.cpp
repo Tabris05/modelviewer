@@ -24,16 +24,20 @@ Model Model::make(const char* pathStr) {
 	data.loadFromFile(path);
 	const fastgltf::Asset asset{ std::move(m_parser.loadGLTF(&data, path.parent_path(), fastgltf::Options::GenerateMeshIndices | fastgltf::Options::LoadExternalBuffers).get()) };
 
+	std::vector<glm::vec4> materials;
 	std::vector<Vertex> vertices;
 	std::vector<GLuint> indices;
+	size_t materialsSize = 0;
 	size_t verticesSize = 0;
 	size_t indicesSize = 0;
 	for (const fastgltf::Mesh curMesh : asset.meshes) {
 		for (size_t i = 0; i < curMesh.primitives.size(); i++) {
 			verticesSize += asset.accessors[curMesh.primitives[i].findAttribute("POSITION")->second].count;
 			indicesSize += asset.accessors[curMesh.primitives[i].indicesAccessor.value()].count;
+			materialsSize++;
 		}
 	}
+	materials.reserve(materialsSize);
 	vertices.reserve(verticesSize);
 	indices.reserve(indicesSize);
 
@@ -41,7 +45,7 @@ Model Model::make(const char* pathStr) {
 
 	AABB aabb{};
 
-	auto processNode = [&asset, &vertices, &indices, &cmds, &aabb](this auto& self, size_t index, glm::mat4 transform) -> void {
+	auto processNode = [&](this auto& self, size_t index, glm::mat4 transform) -> void {
 		const fastgltf::Node& curNode = asset.nodes[index];
 		transform *= std::visit(fastgltf::visitor{
 			[](fastgltf::Node::TransformMatrix matrix) {
@@ -74,16 +78,20 @@ Model Model::make(const char* pathStr) {
 					vertices[index + oldVerticesSize].m_normal = glm::normalize(glm::vec3(normalTransform * glm::vec4(normal, 0.0f)));
 				});
 
-				const fastgltf::Accessor& uvAccessor = asset.accessors[curPrimitive.findAttribute("TEXCOORD_0")->second];
-				fastgltf::iterateAccessorWithIndex<glm::vec2>(asset, uvAccessor, [&vertices, oldVerticesSize](glm::vec2 uv, size_t index) {
-					vertices[index + oldVerticesSize].m_uv = uv;
-				});
+				const fastgltf::Primitive::attribute_type* uvAccessorIndex;
+				if ((uvAccessorIndex = curPrimitive.findAttribute("TEXCOORD_0")) != curPrimitive.attributes.cend()) {
+					const fastgltf::Accessor& uvAccessor = asset.accessors[uvAccessorIndex->second];
+					fastgltf::iterateAccessorWithIndex<glm::vec2>(asset, uvAccessor, [&vertices, oldVerticesSize](glm::vec2 uv, size_t index) {
+						vertices[index + oldVerticesSize].m_uv = uv;
+					});
+				}
 
 				const fastgltf::Accessor& indexAccessor = asset.accessors[curPrimitive.indicesAccessor.value()];
 				fastgltf::iterateAccessor<GLuint>(asset, indexAccessor, [&indices](GLuint index) {
 					indices.emplace_back(index);
 				});
 
+				materials.emplace_back((float)materials.size() / (float)materials.capacity());
 				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, 0);
 			}
 		}
@@ -95,12 +103,13 @@ Model Model::make(const char* pathStr) {
 		processNode(i, transform);
 	}
 
+	ShaderStorageBuffer materialBuf = ShaderStorageBuffer::make(materials);
 	CommandBuffer cmdBuf = CommandBuffer::make(cmds);
 	VertexBuffer vBuf = VertexBuffer::make(vertices);
 	IndexBuffer iBuf = IndexBuffer::make(indices);
 	VertexArray vArr = VertexArray::make();
 	
-
+	materialBuf.bind(0);
 	vArr.linkVertexBuffer(vBuf, sizeof(Vertex));
 	vArr.linkIndexBuffer(iBuf);
 	vArr.linkAttribute(0, 3, GL_FLOAT, offsetof(Vertex, m_position));
@@ -128,10 +137,11 @@ Model Model::make(const char* pathStr) {
 		aabb.m_max = glm::max(aabb.m_max, i);
 	}
 
-	return Model{ std::move(cmdBuf), std::move(vBuf), std::move(iBuf), std::move(vArr), baseTransform, aabb };
+	return Model{ std::move(materialBuf), std::move(cmdBuf), std::move(vBuf), std::move(iBuf), std::move(vArr), baseTransform, aabb };
 }
 
-Model::Model(CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb) :
+Model::Model(ShaderStorageBuffer materialBuf, CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb) :
+	m_materialBuf{ std::move(materialBuf) },
 	m_cmdBuf{ std::move(cmdBuf) },
 	m_vBuf{ std::move(vBuf) },
 	m_iBuf{ std::move(iBuf) },

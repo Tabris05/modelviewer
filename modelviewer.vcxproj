@@ -163,6 +163,7 @@
     <ClCompile Include="src\refcounter.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\shader.cpp" />
+    <ClCompile Include="src\shaderstoragebuffer.cpp" />
     <ClCompile Include="src\vertexarray.cpp" />
     <ClCompile Include="src\vertexbuffer.cpp" />
   </ItemGroup>
@@ -177,6 +178,7 @@
     <ClInclude Include="src\refcounter.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\shader.h" />
+    <ClInclude Include="src\shaderstoragebuffer.h" />
     <ClInclude Include="src\vertex.h" />
     <ClInclude Include="src\vertexarray.h" />
     <ClInclude Include="src\vertexbuffer.h" />
