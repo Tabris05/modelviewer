@@ -8,7 +8,7 @@ flat in int fDrawID;
 
 uniform vec3 camPos;
 
-layout(std430, binding = 0) buffer MaterialBuffer {
+layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	vec4 materialColors[];
 };
 

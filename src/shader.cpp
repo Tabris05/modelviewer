@@ -1,6 +1,5 @@
 #include "shader.h"
 #include <fstream>
-#include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "dbg.h"
 
@@ -22,34 +21,79 @@ GLuint Shader::id() const {
 	return m_id;
 }
 
-template<>
 void Shader::setUniform(const char* uniform, glm::mat4 value) {
-	glProgramUniformMatrix4fv(m_id, glGetUniformLocation(m_id, uniform), 1, GL_FALSE, glm::value_ptr(value));
+	for (auto& [name, location, oldVal] : m_mat4Cache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniformMatrix4fv(m_id, location, 1, GL_FALSE, glm::value_ptr(value));
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniformMatrix4fv(m_id, location, 1, GL_FALSE, glm::value_ptr(value));
+	m_mat4Cache.emplace_back(uniform, location, value);
 }
 
-template<>
 void Shader::setUniform(const char* uniform, glm::vec3 value) {
-	glProgramUniform3fv(m_id, glGetUniformLocation(m_id, uniform), 1, glm::value_ptr(value));
+	for (auto& [name, location, oldVal] : m_vec3Cache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniform3fv(m_id, location, 1, glm::value_ptr(value));
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniform3fv(m_id, location, 1, glm::value_ptr(value));
+	m_vec3Cache.emplace_back(uniform, location, value);
 }
 
-template<>
-void Shader::setUniform(const char* uniform, int value) {
-	glProgramUniform1i(m_id, glGetUniformLocation(m_id, uniform), value);
-}
-
-template<>
 void Shader::setUniform(const char* uniform, GLuint value) {
-	glProgramUniform1i(m_id, glGetUniformLocation(m_id, uniform), value);
+	for (auto& [name, location, oldVal] : m_uintCache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniform1i(m_id, location, value);
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniform1i(m_id, location, value);
+	m_uintCache.emplace_back(uniform, location, value);
 }
 
-template<>
 void Shader::setUniform(const char* uniform, float value) {
-	glProgramUniform1f(m_id, glGetUniformLocation(m_id, uniform), value);
+	for (auto& [name, location, oldVal] : m_floatCache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniform1f(m_id, location, value);
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniform1f(m_id, location, value);
+	m_floatCache.emplace_back(uniform, location, value);
 }
 
-template<typename T>
-void Shader::setUniform(const char* uniform, T value) {
-	print("passed a type to set uniform for which no overload exists");
+void Shader::setUniform(const char* uniform, int value) {
+	for (auto& [name, location, oldVal] : m_intCache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniform1i(m_id, location, value);
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniform1i(m_id, location, value);
+	m_intCache.emplace_back(uniform, location, value);
 }
 
 Shader Shader::make(const char* vsPath, const char* fsPath) {
