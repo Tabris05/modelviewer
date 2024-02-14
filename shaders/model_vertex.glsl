@@ -21,6 +21,7 @@ void main() {
 	T = normalize(T - dot(T, N) * N); 	// reorthogonalize T
 	vec3 B = cross(N, T);
 
+
 	fTBN = mat3(T, B, N);
 	fFragPos = wPos;
 	fTexCoord = vTexCoord;

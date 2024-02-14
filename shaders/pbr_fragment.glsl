@@ -94,6 +94,25 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 f0, float roughness) {
 	return f0 + (max(vec3(1.0f - roughness), f0) - f0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
 }
 
+vec3 fsnormal(vec3 N, vec3 p, vec2 uv) {
+	vec3 dp1 = dFdx(p); vec3 dp2 = dFdy(p); vec2 duv1 = dFdx(uv); vec2 duv2 = dFdy(uv);
+	vec3 dp2perp = cross( dp2, N );
+	vec3 dp1perp = cross( N, dp1 );
+	vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+	vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+	float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) );
+	return normalize(mat3(T * invmax, B * invmax, N) * (texture(normalTexID, fTexCoord).rgb * 2.0f - 1.0f));
+}
+
+float specantialias(vec3 normal, float r2) {
+	float S = 0.15915494f;
+	float K = 0.18f;
+	vec3 ddu = dFdx(normal);
+	vec3 ddv = dFdy(normal);
+	float kr2 = min(2.0f * S * (dot(ddu, ddu) + dot(ddv, ddv)), K);
+	return clamp(r2 + kr2, 0.0f, 1.0f);
+}
+
 vec3 directionalLight(vec3 albedo) {
 	vec3 normal = hasNormal ? (fTBN * normalize(texture(normalTexID, fTexCoord).rgb * 2.0f - 1.0f)) : fTBN[2];
 	float ao = hasAO ? texture(aoTexID, fTexCoord).r : meshAO;
@@ -105,7 +124,10 @@ vec3 directionalLight(vec3 albedo) {
 	vec3 halfway = normalize(viewDir + lightDir);
 	vec3 f0 = mix(vec3(0.04f), albedo, metalness);
 
+	if (specAA && hasNormal) normal = fsnormal(fTBN[2], -viewDir, fTexCoord);
+
 	// directional light
+	if (specAA && hasNormal) roughness = sqrt(specantialias(normal, roughness * roughness));
 	float distribution = distributionGGX(normal, halfway, roughness * roughness); // contributes to specular aliasing
 	float geometry = geometrySmith(normal, viewDir, lightDir, roughness);
 	vec3 fresnel = fresnelSchlick(max(dot(halfway, viewDir), 0.0f), f0);
