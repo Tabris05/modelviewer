@@ -9,7 +9,7 @@ glm::mat4 Camera::getProjMatrix(float fovDeg, float nearPlane, float farPlane) c
 }
 
 glm::mat4 Camera::getViewMatrix() const {
-	return glm::lookAt(m_position, m_position + m_rotation, glm::vec3{ 0.0f, 1.0f, 0.0f });
+	return glm::lookAt(m_position, m_position + m_rotation, m_up);
 }
 
 glm::vec3 Camera::getPos() const {
@@ -24,16 +24,16 @@ void Camera::handleInput(float deltaTime) {
 		m_position -= m_speed * m_rotation * glm::vec3{ deltaTime };
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS) {
-		m_position += m_speed * glm::normalize(glm::cross(m_rotation, glm::vec3{ 0.0f, 1.0f, 0.0f })) * glm::vec3{ deltaTime };
+		m_position += m_speed * glm::normalize(glm::cross(m_rotation, m_up)) * glm::vec3{ deltaTime };
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS) {
-		m_position -= m_speed * glm::normalize(glm::cross(m_rotation, glm::vec3{ 0.0f, 1.0f, 0.0f })) * glm::vec3{ deltaTime };
+		m_position -= m_speed * glm::normalize(glm::cross(m_rotation, m_up)) * glm::vec3{ deltaTime };
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-		m_position += m_speed * glm::vec3{ 0.0f, 1.0f, 0.0f } * glm::vec3{ deltaTime };
+		m_position += m_speed * m_up * glm::vec3{ deltaTime };
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-		m_position -= m_speed * glm::vec3{ 0.0f, 1.0f, 0.0f } * glm::vec3{ deltaTime };
+		m_position -= m_speed * m_up * glm::vec3{ deltaTime };
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
 		m_speed = 5.76;
@@ -56,9 +56,9 @@ void Camera::handleInput(float deltaTime) {
 		float rotX = m_sensitivity * (float)(mouseX - (m_width / 2)) / m_width;
 		float rotY = m_sensitivity * (float)(mouseY - (m_height / 2)) / m_height;
 
-		m_rotation = glm::rotate(m_rotation, glm::radians(-rotX), glm::vec3{ 0.0f, 1.0f, 0.0f });
-		glm::vec3 newRot = glm::rotate(m_rotation, glm::radians(-rotY), glm::normalize(glm::cross(m_rotation, glm::vec3{ 0.0f, 1.0f, 0.0f })));
-		if (!(glm::angle(newRot, glm::vec3{ 0.0f, 1.0f, 0.0f }) <= glm::radians(1.0f) || glm::angle(newRot, glm::vec3{ 0.0f, -1.0f, 0.0f }) <= glm::radians(1.0f))) {
+		m_rotation = glm::rotate(m_rotation, glm::radians(-rotX), m_up);
+		glm::vec3 newRot = glm::rotate(m_rotation, glm::radians(-rotY), glm::normalize(glm::cross(m_rotation, m_up)));
+		if (!(glm::angle(newRot, m_up) <= glm::radians(1.0f) || glm::angle(newRot, glm::vec3{ 0.0f, -1.0f, 0.0f }) <= glm::radians(1.0f))) {
 			m_rotation = newRot;
 		}
 		glfwSetCursorPos(m_window, m_width / 2, m_height / 2);

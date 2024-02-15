@@ -17,6 +17,8 @@ class Camera {
 	private:
 		Camera(GLFWwindow* window, int width, int height);
 
+		static constexpr glm::vec3 m_up{ 0.0f, 1.0f, 0.0f };
+
 		GLFWwindow* m_window;
 		int m_width, m_height;
 		bool m_firstClick = true;
