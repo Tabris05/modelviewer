@@ -1,18 +1,19 @@
 #include "model.h"
 #include <filesystem>
+#include <stb/stb_image.h>
 #include <fastgltf/types.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/glm_element_traits.hpp>
 #define GLM_ENABLE_EXPERIMENTAL 1
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include "material.h"
+#include "texture.h"
 #include "dbg.h"
 
-
+// crash happens after 22 frames when swapping buffers after drawing a model only when bindless textures are read from in the fragment shader and also only if >300 or so meshes are drawn??
 
 void Model::draw() {
-	m_vArr.bind();
-	m_cmdBuf.bind();
 	glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
 }
 
@@ -22,28 +23,108 @@ Model Model::make(const char* pathStr) {
 	const std::filesystem::path path(pathStr);
 	fastgltf::GltfDataBuffer data;
 	data.loadFromFile(path);
-	const fastgltf::Asset asset{ std::move(m_parser.loadGLTF(&data, path.parent_path(), fastgltf::Options::GenerateMeshIndices | fastgltf::Options::LoadExternalBuffers).get()) };
+	const fastgltf::Options options =
+		fastgltf::Options::GenerateMeshIndices |
+		fastgltf::Options::LoadExternalBuffers |
+		fastgltf::Options::LoadExternalImages;
+	const fastgltf::Asset asset{ std::move(m_parser.loadGLTF(&data, path.parent_path(), options).get()) };
 
-	std::vector<glm::vec4> materials;
+	std::vector<Texture> textures;
+	std::vector<std::optional<Texture>> maybeTextures;
+	std::vector<Material> materials;
+	std::vector<GLuint> materialIndices;
+	std::vector<DrawCommand> cmds;
 	std::vector<Vertex> vertices;
 	std::vector<GLuint> indices;
-	size_t materialsSize = 0;
+	size_t numPrimitives = 0;
 	size_t verticesSize = 0;
 	size_t indicesSize = 0;
 	for (const fastgltf::Mesh curMesh : asset.meshes) {
 		for (size_t i = 0; i < curMesh.primitives.size(); i++) {
 			verticesSize += asset.accessors[curMesh.primitives[i].findAttribute("POSITION")->second].count;
 			indicesSize += asset.accessors[curMesh.primitives[i].indicesAccessor.value()].count;
-			materialsSize++;
+			numPrimitives++;
 		}
 	}
-	materials.reserve(materialsSize);
+
+	textures.reserve(asset.textures.size());
+	maybeTextures.resize(asset.textures.size());
+	materials.reserve(asset.materials.size());
+	materialIndices.reserve(numPrimitives);
+	cmds.reserve(numPrimitives);
 	vertices.reserve(verticesSize);
 	indices.reserve(indicesSize);
 
-	std::vector<DrawCommand> cmds;
-
 	AABB aabb{};
+	
+	auto processTexture = [&](size_t index) -> GLuint64 {
+		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle().value();
+		const fastgltf::Texture& curTexture = asset.textures[index];
+		fastgltf::Sampler curSampler{
+			.wrapS = fastgltf::Wrap::Repeat,
+			.wrapT = fastgltf::Wrap::Repeat
+		};
+		if (curTexture.samplerIndex.has_value()) {
+			curSampler = asset.samplers[curTexture.samplerIndex.value()];
+		}
+		const fastgltf::sources::Vector& data = std::get<fastgltf::sources::Vector>(asset.images[curTexture.imageIndex.value()].data);
+		int width, height, nrChannels;
+		unsigned char* bytes = stbi_load_from_memory(data.bytes.data(), data.bytes.size(), &width, &height, &nrChannels, 0);
+		maybeTextures[index] = Texture::make2D(
+			bytes,
+			width,
+			height,
+			nrChannels,
+			static_cast<GLenum>(curSampler.minFilter.value_or(fastgltf::Filter::LinearMipMapLinear)),
+			static_cast<GLenum>(curSampler.magFilter.value_or(fastgltf::Filter::Linear)),
+			static_cast<GLenum>(curSampler.wrapS),
+			static_cast<GLenum>(curSampler.wrapT)
+		);
+		maybeTextures[index]->makeBindless();
+		stbi_image_free(bytes);
+		return maybeTextures[index].value().handle().value();
+	};
+
+	for (const fastgltf::Material& curMaterial : asset.materials) {
+		unsigned char dummyAlbedo[] { 255, 255, 255, 255 };
+		unsigned char dummyMetallicRoughness[] { 255, 255, 255 };
+		unsigned char dummyNormal[] { 0, 0, 255 };
+
+		Material val{
+			.m_baseColor{ glm::make_vec4(curMaterial.pbrData.baseColorFactor.data()) },
+			.m_metallicRoughness { 0.0f, curMaterial.pbrData.roughnessFactor, curMaterial.pbrData.metallicFactor, 0.0f }
+		};
+
+		if (curMaterial.pbrData.baseColorTexture.has_value()) {
+			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex);
+		}
+		else {
+			maybeTextures.emplace_back(Texture::make2D(dummyAlbedo, 1, 1, 4, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
+			val.m_albedoHandle = maybeTextures.back()->makeBindless();
+		}
+
+		if (curMaterial.pbrData.metallicRoughnessTexture.has_value()) {
+			val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
+		}
+		else {
+			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1, 3, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
+			val.m_albedoHandle = maybeTextures.back()->makeBindless();
+		}
+
+		if (curMaterial.normalTexture.has_value()) {
+			val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
+		}
+		else {
+			maybeTextures.emplace_back(Texture::make2D(dummyNormal, 1, 1, 3, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
+			val.m_normalHandle = maybeTextures.back()->makeBindless();
+		}
+
+		materials.emplace_back(val);
+	}
+
+	for (const std::optional<Texture>& curTexture : maybeTextures) {
+		textures.emplace_back(curTexture.value());
+	}
 
 	auto processNode = [&](this auto& self, size_t index, glm::mat4 transform) -> void {
 		const fastgltf::Node& curNode = asset.nodes[index];
@@ -91,7 +172,7 @@ Model Model::make(const char* pathStr) {
 					indices.emplace_back(index);
 				});
 
-				materials.emplace_back((float)materials.size() / (float)materials.capacity());
+				materialIndices.emplace_back(curPrimitive.materialIndex.value());
 				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, 0);
 			}
 		}
@@ -104,17 +185,21 @@ Model Model::make(const char* pathStr) {
 	}
 
 	ShaderStorageBuffer materialBuf = ShaderStorageBuffer::make(materials);
+	ShaderStorageBuffer materialIndexBuf = ShaderStorageBuffer::make(materialIndices);
 	CommandBuffer cmdBuf = CommandBuffer::make(cmds);
 	VertexBuffer vBuf = VertexBuffer::make(vertices);
 	IndexBuffer iBuf = IndexBuffer::make(indices);
 	VertexArray vArr = VertexArray::make();
 	
 	materialBuf.bind(0);
+	materialIndexBuf.bind(1);
 	vArr.linkVertexBuffer(vBuf, sizeof(Vertex));
 	vArr.linkIndexBuffer(iBuf);
 	vArr.linkAttribute(0, 3, GL_FLOAT, offsetof(Vertex, m_position));
 	vArr.linkAttribute(1, 3, GL_FLOAT, offsetof(Vertex, m_normal));
 	vArr.linkAttribute(2, 2, GL_FLOAT, offsetof(Vertex, m_uv));
+	vArr.bind();
+	cmdBuf.bind();
 
 	glm::vec3 size = aabb.m_max - aabb.m_min;
 	float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
@@ -137,11 +222,23 @@ Model Model::make(const char* pathStr) {
 		aabb.m_max = glm::max(aabb.m_max, i);
 	}
 
-	return Model{ std::move(materialBuf), std::move(cmdBuf), std::move(vBuf), std::move(iBuf), std::move(vArr), baseTransform, aabb };
+	return Model{ 
+		std::move(textures),
+		std::move(materialBuf),
+		std::move(materialIndexBuf),
+		std::move(cmdBuf),
+		std::move(vBuf),
+		std::move(iBuf),
+		std::move(vArr),
+		baseTransform,
+		aabb
+	};
 }
 
-Model::Model(ShaderStorageBuffer materialBuf, CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb) :
+Model::Model(std::vector<Texture> textures, ShaderStorageBuffer materialBuf, ShaderStorageBuffer materialIndexBuf, CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb) :
+	m_textures{ std::move(textures) },
 	m_materialBuf{ std::move(materialBuf) },
+	m_materialIndexBuf{ std::move(materialIndexBuf) },
 	m_cmdBuf{ std::move(cmdBuf) },
 	m_vBuf{ std::move(vBuf) },
 	m_iBuf{ std::move(iBuf) },

@@ -23,6 +23,10 @@ Renderer Renderer::make() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_SAMPLES, 8);
 
+#ifdef NDEBUG
+	glfwWindowHint(GLFW_CONTEXT_NO_ERROR, GLFW_NO_ERROR);
+#endif
+
 	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 	int width = mode->width * 3 / 4;
 	int height = mode->height * 3 / 4;
@@ -40,7 +44,7 @@ Renderer Renderer::make() {
 
 	Camera camera = Camera::make(window, width, height);
 	Model model = Model::make("model/scene.gltf");
-	Shader modelShader = Shader::make("shaders/model_vert.glsl", "shaders/model_frag.glsl");
+	Shader modelShader = Shader::make("shaders/model.vert", "shaders/model.frag");
 
 	return Renderer{ window, width, height, std::move(camera), std::move(model), std::move(modelShader) };
 }

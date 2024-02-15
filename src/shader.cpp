@@ -21,9 +21,10 @@ GLuint Shader::id() const {
 	return m_id;
 }
 
+// cache shader uniform location and previous value to minimize driver calls
 void Shader::setUniform(const char* uniform, glm::mat4 value) {
 	for (auto& [name, location, oldVal] : m_mat4Cache) {
-		if (name == uniform) {
+		if (name == uniform) { // constant time string comparison since uniform will always be passed in as a literal (static lifetime)
 			if (value != oldVal) {
 				glProgramUniformMatrix4fv(m_id, location, 1, GL_FALSE, glm::value_ptr(value));
 				oldVal = value;

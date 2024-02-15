@@ -164,6 +164,7 @@
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\shaderstoragebuffer.cpp" />
+    <ClCompile Include="src\texture.cpp" />
     <ClCompile Include="src\vertexarray.cpp" />
     <ClCompile Include="src\vertexbuffer.cpp" />
   </ItemGroup>
@@ -174,18 +175,20 @@
     <ClInclude Include="src\dbg.h" />
     <ClInclude Include="src\drawcommand.h" />
     <ClInclude Include="src\indexbuffer.h" />
+    <ClInclude Include="src\material.h" />
     <ClInclude Include="src\model.h" />
     <ClInclude Include="src\refcounter.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\shader.h" />
     <ClInclude Include="src\shaderstoragebuffer.h" />
+    <ClInclude Include="src\texture.h" />
     <ClInclude Include="src\vertex.h" />
     <ClInclude Include="src\vertexarray.h" />
     <ClInclude Include="src\vertexbuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\model_frag.glsl" />
-    <None Include="shaders\model_vert.glsl" />
+    <None Include="shaders\model.frag" />
+    <None Include="shaders\model.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

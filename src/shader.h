@@ -32,6 +32,7 @@ class Shader {
 		RefCounter m_rc;
 		static inline GLuint m_boundID = 0;
 
+		// shader should never have more than a few uniforms so linear, cache coherent traversal should be fastest
 		std::vector<std::tuple<const char*, GLint, glm::mat4>> m_mat4Cache;
 		std::vector<std::tuple<const char*, GLint, glm::vec3>> m_vec3Cache;
 		std::vector<std::tuple<const char*, GLint, GLuint>> m_uintCache;
