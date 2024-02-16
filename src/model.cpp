@@ -11,8 +11,6 @@
 #include "texture.h"
 #include "dbg.h"
 
-// crash happens after 22 frames when swapping buffers after drawing a model only when bindless textures are read from in the fragment shader and also only if >300 or so meshes are drawn??
-
 void Model::draw() {
 	glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
 }
@@ -57,7 +55,7 @@ Model Model::make(const char* pathStr) {
 
 	AABB aabb{};
 	
-	auto processTexture = [&](size_t index) -> GLuint64 {
+	auto processTexture = [&](size_t index, bool srgb = false) -> GLuint64 {
 		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle().value();
 		const fastgltf::Texture& curTexture = asset.textures[index];
 		fastgltf::Sampler curSampler{
@@ -78,7 +76,8 @@ Model Model::make(const char* pathStr) {
 			static_cast<GLenum>(curSampler.minFilter.value_or(fastgltf::Filter::LinearMipMapLinear)),
 			static_cast<GLenum>(curSampler.magFilter.value_or(fastgltf::Filter::Linear)),
 			static_cast<GLenum>(curSampler.wrapS),
-			static_cast<GLenum>(curSampler.wrapT)
+			static_cast<GLenum>(curSampler.wrapT),
+			srgb
 		);
 		maybeTextures[index]->makeBindless();
 		stbi_image_free(bytes);
@@ -96,7 +95,7 @@ Model Model::make(const char* pathStr) {
 		};
 
 		if (curMaterial.pbrData.baseColorTexture.has_value()) {
-			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex);
+			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex, true);
 		}
 		else {
 			maybeTextures.emplace_back(Texture::make2D(dummyAlbedo, 1, 1, 4, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
