@@ -195,6 +195,8 @@
     <None Include="shaders\model.vert" />
     <None Include="shaders\postprocessing.frag" />
     <None Include="shaders\postprocessing.vert" />
+    <None Include="shaders\prepass.frag" />
+    <None Include="shaders\prepass.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

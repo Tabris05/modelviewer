@@ -160,5 +160,11 @@
     <None Include="shaders\postprocessing.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="shaders\prepass.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="shaders\prepass.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

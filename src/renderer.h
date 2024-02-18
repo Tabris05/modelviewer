@@ -28,6 +28,7 @@ class Renderer {
 			Camera camera,
 			Model model,
 			Shader modelShader,
+			Shader prepassShader,
 			Shader postprocessingShader,
 			FrameBuffer postprocessingBuffer,
 			Texture postprocessingTarget,
@@ -39,6 +40,7 @@ class Renderer {
 		Camera m_camera;
 		Model m_model;
 		Shader m_modelShader;
+		Shader m_prepassShader;
 		Shader m_postprocessingShader;
 		FrameBuffer m_postprocessingBuffer;
 		Texture m_postprocessingTarget;

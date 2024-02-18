@@ -47,6 +47,7 @@ Renderer Renderer::make() {
 	Camera camera = Camera::make(window, width, height);
 	Model model = Model::make("model/scene.gltf");
 	Shader modelShader = Shader::make("shaders/model.vert", "shaders/model.frag");
+	Shader prepassShader = Shader::make("shaders/prepass.vert", "shaders/prepass.frag");
 	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
@@ -69,6 +70,7 @@ Renderer Renderer::make() {
 		std::move(camera),
 		std::move(model),
 		std::move(modelShader),
+		std::move(prepassShader),
 		std::move(postprocessingShader),
 		std::move(postprocessingBuffer),
 		std::move(postprocessingTarget),
@@ -84,21 +86,32 @@ Renderer::~Renderer() {
 }
 
 void Renderer::draw() {
-	// color pass
-	m_modelShader.bind();
 	m_multisampledBuffer.bind();
+
+	// depth pass
 	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDepthFunc(GL_LEQUAL);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	m_prepassShader.bind();
+	m_prepassShader.setUniform("camMatrix", m_camera.getProjMatrix(45.0f, 0.1f, 100.0f) * m_camera.getViewMatrix());
+	m_prepassShader.setUniform("modelMatrix", m_model.m_baseTransform);
+	m_model.draw();
+
+	// color pass
+	glDepthMask(GL_FALSE);
+	glDepthFunc(GL_EQUAL);
+	m_modelShader.bind();
 	m_modelShader.setUniform("camMatrix", m_camera.getProjMatrix(45.0f, 0.1f, 100.0f) * m_camera.getViewMatrix());
 	m_modelShader.setUniform("modelMatrix", m_model.m_baseTransform);
 	m_modelShader.setUniform("camPos", m_camera.getPos());
 	m_model.draw();
 
 	// post processing pass
+	glDisable(GL_DEPTH_TEST);
 	m_multisampledBuffer.blitTo(m_postprocessingBuffer, GL_COLOR_BUFFER_BIT, m_width, m_height);
 	m_multisampledBuffer.unbind();
 	m_postprocessingShader.bind();
-	glDisable(GL_DEPTH_TEST);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 
 	glfwSwapBuffers(m_window);
@@ -126,6 +139,7 @@ Renderer::Renderer(
 	Camera camera,
 	Model model,
 	Shader modelShader,
+	Shader prepassShader,
 	Shader postprocessingShader,
 	FrameBuffer postprocessingBuffer,
 	Texture postprocessingTarget,
@@ -139,6 +153,7 @@ Renderer::Renderer(
 	m_camera{ std::move(camera) },
 	m_model { std::move(model) },
 	m_modelShader{ std::move(modelShader) },
+	m_prepassShader{ std::move(prepassShader) },
 	m_postprocessingShader{ std::move(postprocessingShader) },
 	m_postprocessingBuffer{ std::move(postprocessingBuffer) },
 	m_postprocessingTarget{ std::move(postprocessingTarget) },
