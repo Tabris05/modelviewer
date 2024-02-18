@@ -110,6 +110,14 @@ Model Model::make(const char* pathStr) {
 			val.m_albedoHandle = maybeTextures.back()->makeBindless();
 		}
 
+		if (curMaterial.occlusionTexture.has_value()) {
+			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
+		}
+		else {
+			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1, 3, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
+			val.m_albedoHandle = maybeTextures.back()->makeBindless();
+		}
+
 		if (curMaterial.normalTexture.has_value()) {
 			val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
 		}

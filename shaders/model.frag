@@ -115,7 +115,7 @@ void main() {
 	vec3 normal = normalize(fNorm);
 	normal = normalize(makeTBN(normal, -viewDir, fUV) * (texture(materials[i].normalMap, fUV).rgb * 2.0f - 1.0f));
 	
-	float occlusion = 1.0f; //texture(materials[i].occlusionMap, fUV).r;
+	float occlusion = texture(materials[i].occlusionMap, fUV).r;
 	float metalness = texture(materials[i].metallicRoughnessMap, fUV).b * materials[i].metallicRoughness.b;
 	float roughness = texture(materials[i].metallicRoughnessMap, fUV).g * materials[i].metallicRoughness.g;
 	roughness = isotrophicNDFFilter(normal, roughness);
