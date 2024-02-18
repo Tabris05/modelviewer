@@ -22,6 +22,12 @@ RefCounter& RefCounter::operator=(const RefCounter& src) {
 	return *this;
 }
 
+RefCounter& RefCounter::operator=(RefCounter&& src) noexcept {
+	this->~RefCounter();
+	new (this) RefCounter{ std::move(src) };
+	return *this;
+}
+
 RefCounter::~RefCounter() {
 	if (m_count) {
 		if (*m_count == 0) delete m_count;

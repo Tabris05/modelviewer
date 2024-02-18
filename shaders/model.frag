@@ -120,7 +120,5 @@ void main() {
 	float roughness = texture(materials[i].metallicRoughnessMap, fUV).g * materials[i].metallicRoughness.g;
 	roughness = isotrophicNDFFilter(normal, roughness);
 	
-	vec3 rawCol = directionalLight(viewDir, materialColor.rgb, normal, metalness, roughness) + ambientLight(materialColor.rgb, occlusion);
-	vec3 toneMappedCol = rawCol / (rawCol + vec3(1.0f));
-	fCol = pow(toneMappedCol, vec3(1.0f / 2.2f));
+	fCol = directionalLight(viewDir, materialColor.rgb, normal, metalness, roughness) + ambientLight(materialColor.rgb, occlusion);
 }

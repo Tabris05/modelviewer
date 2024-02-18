@@ -9,6 +9,7 @@ class RefCounter {
 		RefCounter(const RefCounter& src);
 		RefCounter(RefCounter&& src) noexcept;
 		RefCounter& operator=(const RefCounter& src);
+		RefCounter& operator=(RefCounter&& src) noexcept;
 		~RefCounter();
 
 	private:

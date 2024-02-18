@@ -52,18 +52,33 @@ void Shader::setUniform(const char* uniform, glm::vec3 value) {
 	m_vec3Cache.emplace_back(uniform, location, value);
 }
 
-void Shader::setUniform(const char* uniform, GLuint value) {
-	for (auto& [name, location, oldVal] : m_uintCache) {
+void Shader::setUniform(const char* uniform, GLuint64 value) {
+	for (auto& [name, location, oldVal] : m_ulongCache) {
 		if (name == uniform) {
 			if (value != oldVal) {
-				glProgramUniform1i(m_id, location, value);
+				glProgramUniformHandleui64ARB(m_id, location, value);
 				oldVal = value;
 			}
 			return;
 		}
 	}
 	GLint location = glGetUniformLocation(m_id, uniform);
-	glProgramUniform1i(m_id, location, value);
+	glProgramUniformHandleui64ARB(m_id, location, value);
+	m_ulongCache.emplace_back(uniform, location, value);
+}
+
+void Shader::setUniform(const char* uniform, GLuint value) {
+	for (auto& [name, location, oldVal] : m_uintCache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniform1ui(m_id, location, value);
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniform1ui(m_id, location, value);
 	m_uintCache.emplace_back(uniform, location, value);
 }
 

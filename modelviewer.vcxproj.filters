@@ -84,6 +84,12 @@
     <ClCompile Include="src\texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\framebuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\renderbuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h">
@@ -134,12 +140,24 @@
     <ClInclude Include="src\texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\framebuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\renderbuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\model.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="shaders\model.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="shaders\postprocessing.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="shaders\postprocessing.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

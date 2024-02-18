@@ -57,7 +57,9 @@ Model Model::make(const char* pathStr) {
 	
 	auto processTexture = [&](size_t index, bool srgb = false) -> GLuint64 {
 		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle().value();
+
 		const fastgltf::Texture& curTexture = asset.textures[index];
+
 		fastgltf::Sampler curSampler{
 			.wrapS = fastgltf::Wrap::Repeat,
 			.wrapT = fastgltf::Wrap::Repeat
@@ -65,20 +67,40 @@ Model Model::make(const char* pathStr) {
 		if (curTexture.samplerIndex.has_value()) {
 			curSampler = asset.samplers[curTexture.samplerIndex.value()];
 		}
+
 		const fastgltf::sources::Vector& data = std::get<fastgltf::sources::Vector>(asset.images[curTexture.imageIndex.value()].data);
 		int width, height, nrChannels;
 		unsigned char* bytes = stbi_load_from_memory(data.bytes.data(), data.bytes.size(), &width, &height, &nrChannels, 0);
+		
+		GLenum internalFormat = srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8;
+		GLenum format = GL_RGBA;
+		switch (nrChannels) {
+		case 3:
+			internalFormat = srgb ? GL_SRGB8 : GL_RGB8;
+			format = GL_RGB;
+			break;
+		case 2:
+			internalFormat = GL_RG8;
+			format = GL_RG;
+			break;
+		case 1:
+			internalFormat = GL_R8;
+			format = GL_RED;
+			break;
+		}
+
 		maybeTextures[index] = Texture::make2D(
 			bytes,
 			width,
 			height,
-			nrChannels,
+			internalFormat,
+			format,
 			static_cast<GLenum>(curSampler.minFilter.value_or(fastgltf::Filter::LinearMipMapLinear)),
 			static_cast<GLenum>(curSampler.magFilter.value_or(fastgltf::Filter::Linear)),
 			static_cast<GLenum>(curSampler.wrapS),
-			static_cast<GLenum>(curSampler.wrapT),
-			srgb
+			static_cast<GLenum>(curSampler.wrapT)
 		);
+
 		maybeTextures[index]->makeBindless();
 		stbi_image_free(bytes);
 		return maybeTextures[index].value().handle().value();
@@ -98,7 +120,7 @@ Model Model::make(const char* pathStr) {
 			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex, true);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyAlbedo, 1, 1, 4, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
+			maybeTextures.emplace_back(Texture::make2D(dummyAlbedo, 1, 1));
 			val.m_albedoHandle = maybeTextures.back()->makeBindless();
 		}
 
@@ -106,7 +128,7 @@ Model Model::make(const char* pathStr) {
 			val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1, 3, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
+			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1));
 			val.m_albedoHandle = maybeTextures.back()->makeBindless();
 		}
 
@@ -114,15 +136,15 @@ Model Model::make(const char* pathStr) {
 			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1, 3, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
-			val.m_albedoHandle = maybeTextures.back()->makeBindless();
+			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1));
+			val.m_occlusionHandle = maybeTextures.back()->makeBindless();
 		}
 
 		if (curMaterial.normalTexture.has_value()) {
 			val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyNormal, 1, 1, 3, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE));
+			maybeTextures.emplace_back(Texture::make2D(dummyNormal, 1, 1));
 			val.m_normalHandle = maybeTextures.back()->makeBindless();
 		}
 

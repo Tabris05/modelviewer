@@ -157,10 +157,12 @@
     <ClCompile Include="lib\stb.c" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\commandbuffer.cpp" />
+    <ClCompile Include="src\framebuffer.cpp" />
     <ClCompile Include="src\indexbuffer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\refcounter.cpp" />
+    <ClCompile Include="src\renderbuffer.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\shaderstoragebuffer.cpp" />
@@ -174,10 +176,12 @@
     <ClInclude Include="src\commandbuffer.h" />
     <ClInclude Include="src\dbg.h" />
     <ClInclude Include="src\drawcommand.h" />
+    <ClInclude Include="src\framebuffer.h" />
     <ClInclude Include="src\indexbuffer.h" />
     <ClInclude Include="src\material.h" />
     <ClInclude Include="src\model.h" />
     <ClInclude Include="src\refcounter.h" />
+    <ClInclude Include="src\renderbuffer.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\shader.h" />
     <ClInclude Include="src\shaderstoragebuffer.h" />
@@ -189,6 +193,8 @@
   <ItemGroup>
     <None Include="shaders\model.frag" />
     <None Include="shaders\model.vert" />
+    <None Include="shaders\postprocessing.frag" />
+    <None Include="shaders\postprocessing.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

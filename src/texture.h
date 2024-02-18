@@ -7,11 +7,21 @@
 
 class Texture {
 	public:
-		GLuint64 makeBindless();
 		GLuint id() const;
+		GLuint64 makeBindless();
 		std::optional<GLuint64> handle() const;
 
-		static Texture make2D(unsigned char* data, int width, int height, int nrChannels, GLenum minFilter, GLenum magFilter, GLenum wrapS, GLenum wrapT, bool srgb = false);
+		static Texture make2D(
+			unsigned char* data,
+			int width, 
+			int height,
+			GLenum internalFormat = GL_RGB8,
+			GLenum format = GL_RGB,
+			GLenum minFilter = GL_NEAREST,
+			GLenum magFilter = GL_NEAREST,
+			GLenum wrapS = GL_CLAMP_TO_EDGE,
+			GLenum wrapT = GL_CLAMP_TO_EDGE
+		);
 		~Texture();
 	private:
 		Texture(GLuint id);
