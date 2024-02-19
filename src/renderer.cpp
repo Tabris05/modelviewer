@@ -1,4 +1,7 @@
 #include "renderer.h"
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 #include "dbg.h"
 
 void Renderer::run() {
@@ -44,6 +47,10 @@ Renderer Renderer::make() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
+	ImGui::CreateContext();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 460 core");
+
 	Camera camera = Camera::make(window, width, height);
 	Model model = Model::make("model/scene.gltf");
 	Shader modelShader = Shader::make("shaders/model.vert", "shaders/model.frag");
@@ -86,6 +93,7 @@ Renderer::~Renderer() {
 }
 
 void Renderer::draw() {
+	// begin frame
 	m_multisampledBuffer.bind();
 
 	// depth pass
@@ -114,6 +122,18 @@ void Renderer::draw() {
 	m_postprocessingShader.bind();
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 
+	// UI pass
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("Options");
+	ImGui::Text("Performance");
+	ImGui::Text("%.0f FPS, %.2fms", 1.0 / (m_curFrame - m_lastFrame), 1000.0 * (m_curFrame - m_lastFrame));
+	ImGui::End();
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	// end frame
 	glfwSwapBuffers(m_window);
 }
 

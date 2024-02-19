@@ -1,4 +1,5 @@
 #include "texture.h"
+#include <cmath>
 
 GLuint64 Texture::makeBindless() {
 	m_handle = glGetTextureHandleARB(m_id);
