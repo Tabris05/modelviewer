@@ -85,7 +85,7 @@ vec3 fresnelSchlick(vec3 halfway, vec3 viewDir, vec3 F0) {
 }
 
 vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, float roughness) {
-	if(lightColor == vec3(0.0f, 0.0f, 0.0f)) return glm::vec3(0.0f, 0.0f, 0.0f);
+	if(lightColor == vec3(0.0f, 0.0f, 0.0f)) return vec3(0.0f, 0.0f, 0.0f);
 	vec3 halfway = normalize(viewDir + lightAngle);
 
 	vec3 F0 = mix(vec3(0.04f), albedo, metalness);
