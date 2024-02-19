@@ -42,7 +42,7 @@ void Camera::handleInput(float deltaTime) {
 		m_speed = 1.44f;
 	}
 
-	if (glfwGetMouseButton(m_window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+	if (glfwGetMouseButton(m_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
 		glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 		if (m_firstClick) {

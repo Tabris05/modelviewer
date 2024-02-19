@@ -1,6 +1,7 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include <filesystem>
 #include <fastgltf/parser.hpp>
 #include "texture.h"
 #include "vertexbuffer.h"
@@ -12,12 +13,10 @@
 
 class Model {
 	public:
-		const AABB m_aabb;
-		const glm::mat4 m_baseTransform;
-
 		void draw();
+		glm::mat4 baseTransform() const;
 
-		static Model make(const char* pathStr = nullptr);
+		static Model make(const std::filesystem::path& path);
 
 	private:
 		Model(
@@ -34,6 +33,8 @@ class Model {
 
 		static inline fastgltf::Parser m_parser;
 
+		AABB m_aabb;
+		glm::mat4 m_baseTransform;
 		std::vector<Texture> m_textures;
 		ShaderStorageBuffer m_materialBuf;
 		ShaderStorageBuffer m_materialIndexBuf;

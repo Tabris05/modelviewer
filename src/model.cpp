@@ -1,5 +1,4 @@
 #include "model.h"
-#include <filesystem>
 #include <stb/stb_image.h>
 #include <fastgltf/types.hpp>
 #include <fastgltf/tools.hpp>
@@ -15,10 +14,11 @@ void Model::draw() {
 	glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
 }
 
-Model Model::make(const char* pathStr) {
-	//if (!pathStr) return Model{ VertexBuffer::make(std::vector<Vertex>{}), IndexBuffer::make(std::vector<GLuint>{}), VertexArray::make(), 0, glm::mat4{ 1.0f }, AABB{} };
+glm::mat4 Model::baseTransform() const {
+	return m_baseTransform;
+}
 
-	const std::filesystem::path path(pathStr);
+Model Model::make(const std::filesystem::path& path) {
 	fastgltf::GltfDataBuffer data;
 	data.loadFromFile(path);
 	const fastgltf::Options options =

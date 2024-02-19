@@ -1,6 +1,10 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#define GLM_ENABLE_EXPERIMENTAL 1
+#include <optional>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/glm.hpp>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "camera.h"
@@ -19,6 +23,10 @@ class Renderer {
 
 	private:
 		void draw();
+		void drawLightMenu(float horizontalScale, float verticalScale);
+		void drawModelMenu(float horizontalScale, float verticalScale);
+		void drawOptionsMenu(float horizontalScale, float verticalScale);
+		void drawAssetMenu(float horizontalScale, float verticalScale);
 		void resizeWindow(int width, int height);
 
 		Renderer(
@@ -26,7 +34,6 @@ class Renderer {
 			int width,
 			int height,
 			Camera camera,
-			Model model,
 			Shader modelShader,
 			Shader prepassShader,
 			Shader postprocessingShader,
@@ -38,7 +45,7 @@ class Renderer {
 		);
 		
 		Camera m_camera;
-		Model m_model;
+		std::optional<Model> m_model;
 		Shader m_modelShader;
 		Shader m_prepassShader;
 		Shader m_postprocessingShader;
@@ -50,6 +57,12 @@ class Renderer {
 		GLFWwindow* m_window;
 		int m_width, m_height;
 		double m_curFrame = 0.0f, m_lastFrame = 0.0f;
+
+		std::string m_modelPath;
+		glm::vec3 m_lightAngle{ 0.0f, 0.0f, -1.0f }, m_lightColor{ 0.98f, 0.90f, 0.74f };
+		float m_lightIntensity = 5.0f, m_fov = 90.0f, m_gamma = 2.2f, m_modelScale = 100.0f;
+		glm::quat m_modelRotation{ glm::mat4{ 1.0f } };
+		bool m_vsyncEnabled = true;
 };
 
 #endif

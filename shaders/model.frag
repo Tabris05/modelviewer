@@ -20,6 +20,9 @@ in vec2 fUV;
 flat in int fDrawID;
 
 uniform vec3 camPos;
+uniform vec3 lightAngle;
+uniform vec3 lightColor;
+uniform float lightIntensity;
 
 layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	Material materials[];
@@ -67,11 +70,11 @@ float ggxNDF(vec3 normal, vec3 halfway, float alpha) {
 	return alpha2 / (PI * denom * denom);
 }
 
-float geometrySmith(vec3 normal, vec3 viewDir, vec3 lightDir, float roughness) {
+float geometrySmith(vec3 normal, vec3 viewDir, vec3 lightAngle, float roughness) {
 	float alpha = roughness + 1;
 	float k = alpha * alpha / 8.0f;
 	float nDotV = clampedDot(normal, viewDir);
-	float nDotL = clampedDot(normal, lightDir);
+	float nDotL = clampedDot(normal, lightAngle);
 	float gSub1 = nDotV / (nDotV * (1.0f - k) + k);
 	float gSub2 = nDotL / (nDotL * (1.0f - k) + k);
 	return gSub1 * gSub2;
@@ -82,24 +85,21 @@ vec3 fresnelSchlick(vec3 halfway, vec3 viewDir, vec3 F0) {
 }
 
 vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, float roughness) {
-	vec3 lightCol = vec3(0.98f, 0.90f, 0.74f);
-	float lightIntensity = 5.0f;
-
-	vec3 lightDir = vec3(0.0f, 0.0f, -1.0f);
-	vec3 halfway = normalize(viewDir + lightDir);
+	if(lightColor == vec3(0.0f, 0.0f, 0.0f)) return glm::vec3(0.0f, 0.0f, 0.0f);
+	vec3 halfway = normalize(viewDir + lightAngle);
 
 	vec3 F0 = mix(vec3(0.04f), albedo, metalness);
 
 	float distribution = ggxNDF(normal, halfway, roughness * roughness);
-	float geometry = geometrySmith(normal, viewDir, lightDir, roughness);
+	float geometry = geometrySmith(normal, viewDir, lightAngle, roughness);
 	vec3 fresnel = fresnelSchlick(halfway, viewDir, F0);
 
 	vec3 numerator = distribution * geometry * fresnel;
-	float denominator = 4.0f * clampedDot(normal, viewDir) * clampedDot(normal, lightDir) + EPSILON;
+	float denominator = 4.0f * clampedDot(normal, viewDir) * clampedDot(normal, lightAngle) + EPSILON;
 	
 	vec3 specular = numerator / denominator;
 	vec3 diffuse = (vec3(1.0f) - fresnel) * (1.0f - metalness) * albedo / PI;
-	return (diffuse + specular) * clampedDot(normal, lightDir) * lightCol * lightIntensity;
+	return (diffuse + specular) * clampedDot(normal, lightAngle) * lightColor * lightIntensity;
 }
 
 vec3 ambientLight(vec3 albedo, float occlusion) {
