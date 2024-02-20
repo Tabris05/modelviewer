@@ -1,9 +1,10 @@
 #version 460 core
+#extension GL_ARB_bindless_texture : require
 
 in vec2 fUV;
 
 uniform float gamma;
-uniform sampler2D inputTex;
+layout(bindless_sampler) uniform sampler2D inputTex;
 
 out vec3 FragColor;
 
