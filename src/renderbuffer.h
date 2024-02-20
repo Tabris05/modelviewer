@@ -2,6 +2,7 @@
 #define RENDERBUFFER_H
 
 #include <glad/glad.h>
+#include "refcounter.h"
 
 class RenderBuffer {
 	public:
@@ -14,6 +15,7 @@ class RenderBuffer {
 		RenderBuffer(GLuint id);
 
 		GLuint m_id;
+		RefCounter m_rc;
 };
 
 #endif

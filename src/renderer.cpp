@@ -22,7 +22,7 @@ void Renderer::run() {
 		m_lastFrame = m_curFrame;
 		m_curFrame = glfwGetTime();
 
-		//checkErr();
+		checkErr();
 	}
 }
 
@@ -213,7 +213,7 @@ void Renderer::resizeWindow(int width, int height) {
 	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.makeBindless());
 	m_multisampledColorTarget = RenderBuffer::makeMultisampled(GL_RGB16F, width, height);
 	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(GL_DEPTH_COMPONENT, width, height);
-	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0); // this line causes invalid operation errors
+	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
 	glViewport(0, 0, width, height);
 	draw();

@@ -19,7 +19,7 @@ RenderBuffer RenderBuffer::makeMultisampled(GLenum internalFormat, int width, in
 }
 
 RenderBuffer::~RenderBuffer() {
-	glDeleteRenderbuffers(1, &m_id);
+	if(m_rc.count() == 0) glDeleteRenderbuffers(1, &m_id);
 }
 
 RenderBuffer::RenderBuffer(GLuint id) : m_id{ id } {}
