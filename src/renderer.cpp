@@ -10,7 +10,7 @@ void Renderer::run() {
 
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
-		if (const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+		if (const ImGuiIO& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
 			m_camera.handleInput(m_curFrame - m_lastFrame);
 		}
 
@@ -192,15 +192,16 @@ void Renderer::drawAssetMenu(float horizontalScale, float verticalScale) {
 	ImGui::Begin("Load Assets");
 	ImGui::SetWindowPos(ImVec2{ 825.0f * horizontalScale, 0.0f });
 	ImGui::SetWindowSize(ImVec2{ 500.0f * horizontalScale, 75.0f * verticalScale });
-	ImGui::PushItemWidth(400.0f);
-	ImGui::InputText("##modelload", &m_modelPath);
-	ImGui::SameLine();
 	if (ImGui::Button("Load model")) {
 		std::filesystem::path modelPath{ m_modelPath };
 		if (std::filesystem::exists(modelPath) && modelPath.extension() == ".gltf") {
 			m_model = std::move(Model::make(modelPath));
 		}
 	}
+	ImGui::SameLine();
+	ImGui::PushItemWidth(400.0f * horizontalScale);
+	ImGui::InputText("##modelload", &m_modelPath);
+	
 	ImGui::End();
 }
 
