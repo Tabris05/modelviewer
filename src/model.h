@@ -22,7 +22,6 @@ class Model {
 		Model(
 			std::vector<Texture> textures,
 			ShaderStorageBuffer materialBuf,
-			ShaderStorageBuffer materialIndexBuf,
 			CommandBuffer cmdBuf,
 			VertexBuffer vBuf,
 			IndexBuffer iBuf,
@@ -37,7 +36,6 @@ class Model {
 		glm::mat4 m_baseTransform;
 		std::vector<Texture> m_textures;
 		ShaderStorageBuffer m_materialBuf;
-		ShaderStorageBuffer m_materialIndexBuf;
 		CommandBuffer m_cmdBuf;
 		VertexBuffer m_vBuf;
 		IndexBuffer m_iBuf;

@@ -30,7 +30,6 @@ Model Model::make(const std::filesystem::path& path) {
 	std::vector<Texture> textures;
 	std::vector<std::optional<Texture>> maybeTextures;
 	std::vector<Material> materials;
-	std::vector<GLuint> materialIndices;
 	std::vector<DrawCommand> cmds;
 	std::vector<Vertex> vertices;
 	std::vector<GLuint> indices;
@@ -48,7 +47,6 @@ Model Model::make(const std::filesystem::path& path) {
 	textures.reserve(asset.textures.size());
 	maybeTextures.resize(asset.textures.size());
 	materials.reserve(asset.materials.size());
-	materialIndices.reserve(numPrimitives);
 	cmds.reserve(numPrimitives);
 	vertices.reserve(verticesSize);
 	indices.reserve(indicesSize);
@@ -201,8 +199,7 @@ Model Model::make(const std::filesystem::path& path) {
 					indices.emplace_back(index);
 				});
 
-				materialIndices.emplace_back(curPrimitive.materialIndex.value());
-				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, 0);
+				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value());
 			}
 		}
 		for (size_t i : curNode.children) self(i, transform);
@@ -214,14 +211,12 @@ Model Model::make(const std::filesystem::path& path) {
 	}
 
 	ShaderStorageBuffer materialBuf = ShaderStorageBuffer::make(materials);
-	ShaderStorageBuffer materialIndexBuf = ShaderStorageBuffer::make(materialIndices);
 	CommandBuffer cmdBuf = CommandBuffer::make(cmds);
 	VertexBuffer vBuf = VertexBuffer::make(vertices);
 	IndexBuffer iBuf = IndexBuffer::make(indices);
 	VertexArray vArr = VertexArray::make();
 	
 	materialBuf.bind(0);
-	materialIndexBuf.bind(1);
 	vArr.linkVertexBuffer(vBuf, sizeof(Vertex));
 	vArr.linkIndexBuffer(iBuf);
 	vArr.linkAttribute(0, 3, GL_FLOAT, offsetof(Vertex, m_position));
@@ -254,7 +249,6 @@ Model Model::make(const std::filesystem::path& path) {
 	return Model{ 
 		std::move(textures),
 		std::move(materialBuf),
-		std::move(materialIndexBuf),
 		std::move(cmdBuf),
 		std::move(vBuf),
 		std::move(iBuf),
@@ -264,10 +258,18 @@ Model Model::make(const std::filesystem::path& path) {
 	};
 }
 
-Model::Model(std::vector<Texture> textures, ShaderStorageBuffer materialBuf, ShaderStorageBuffer materialIndexBuf, CommandBuffer cmdBuf, VertexBuffer vBuf, IndexBuffer iBuf, VertexArray vArr, glm::mat4 baseTransform, AABB aabb) :
+Model::Model(
+	std::vector<Texture> textures,
+	ShaderStorageBuffer materialBuf,
+	CommandBuffer cmdBuf,
+	VertexBuffer vBuf,
+	IndexBuffer iBuf,
+	VertexArray vArr,
+	glm::mat4 baseTransform,
+	AABB aabb
+) :
 	m_textures{ std::move(textures) },
 	m_materialBuf{ std::move(materialBuf) },
-	m_materialIndexBuf{ std::move(materialIndexBuf) },
 	m_cmdBuf{ std::move(cmdBuf) },
 	m_vBuf{ std::move(vBuf) },
 	m_iBuf{ std::move(iBuf) },

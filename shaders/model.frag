@@ -17,7 +17,7 @@ in vec3 fPos;
 in vec3 fNorm;
 in vec2 fUV;
 
-flat in int fDrawID;
+flat in int fMaterialIndex;
 
 uniform vec3 camPos;
 uniform vec3 lightAngle;
@@ -26,10 +26,6 @@ uniform float lightIntensity;
 
 layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	Material materials[];
-};
-
-layout(std430, binding = 1) readonly buffer MaterialIndexBuffer {
-	uint materialIndices[];
 };
 
 out vec3 fCol;
@@ -107,17 +103,15 @@ vec3 ambientLight(vec3 albedo, float occlusion) {
 }
  
 void main() {
-	uint i = materialIndices[fDrawID];
-
 	vec3 viewDir = normalize(camPos - fPos);
 	
-	vec4 materialColor = texture(materials[i].albedoMap, fUV) * materials[i].baseColor;
+	vec4 materialColor = texture(materials[fMaterialIndex].albedoMap, fUV) * materials[fMaterialIndex].baseColor;
 	vec3 normal = normalize(fNorm);
-	normal = normalize(makeTBN(normal, -viewDir, fUV) * (texture(materials[i].normalMap, fUV).rgb * 2.0f - 1.0f));
+	normal = normalize(makeTBN(normal, -viewDir, fUV) * (texture(materials[fMaterialIndex].normalMap, fUV).rgb * 2.0f - 1.0f));
 	
-	float occlusion = texture(materials[i].occlusionMap, fUV).r;
-	float metalness = texture(materials[i].metallicRoughnessMap, fUV).b * materials[i].metallicRoughness.b;
-	float roughness = texture(materials[i].metallicRoughnessMap, fUV).g * materials[i].metallicRoughness.g;
+	float occlusion = texture(materials[fMaterialIndex].occlusionMap, fUV).r;
+	float metalness = texture(materials[fMaterialIndex].metallicRoughnessMap, fUV).b * materials[fMaterialIndex].metallicRoughness.b;
+	float roughness = texture(materials[fMaterialIndex].metallicRoughnessMap, fUV).g * materials[fMaterialIndex].metallicRoughness.g;
 	roughness = isotrophicNDFFilter(normal, roughness);
 	
 	fCol = directionalLight(viewDir, materialColor.rgb, normal, metalness, roughness) + ambientLight(materialColor.rgb, occlusion);
