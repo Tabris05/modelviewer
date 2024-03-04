@@ -66,7 +66,9 @@ Renderer Renderer::make() {
 	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
-	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT);
+	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT24);
+	shadowmapBuffer.attachTexture(shadowmapTarget, GL_DEPTH_ATTACHMENT);
+	modelShader.setUniform("shadowmapTex", shadowmapTarget.makeBindless());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
 	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(GL_RGB16F, width, height);
@@ -78,6 +80,7 @@ Renderer Renderer::make() {
 	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	postprocessingShader.setUniform("inputTex", postprocessingTarget.makeBindless());
+	//postprocessingShader.setUniform("inputTex", shadowmapTarget.handle().value());
 
 	return Renderer{ 
 		window,
@@ -117,17 +120,25 @@ void Renderer::draw() {
 			worldSpaceAABB.m_max.y,
 			worldSpaceAABB.m_min.z,
 			worldSpaceAABB.m_max.z
-		) * glm::lookAt(glm::vec3{ 0.0f }, m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
+		) * glm::lookAt(glm::vec3{ 0.0f }, -m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
 
 		// shadow pass
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LEQUAL);
+		glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(1.0f, 1.0f);
+		m_shadowmapBuffer.bind();
+		glClear(GL_DEPTH_BUFFER_BIT);
 		m_depthShader.bind();
-		//m_depthShader.setUniform("camMatrix", lightMatrix);
+		m_depthShader.setUniform("camMatrix", lightMatrix);
 		m_depthShader.setUniform("modelMatrix", modelMatrix);
+		m_model->draw();
 
 		// depth pass
+		glDisable(GL_POLYGON_OFFSET_FILL);
+		glViewport(0, 0, m_width, m_height);
 		m_multisampledBuffer.bind();
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 		m_depthShader.setUniform("camMatrix", camMatrix);
@@ -139,6 +150,7 @@ void Renderer::draw() {
 		m_modelShader.bind();
 		m_modelShader.setUniform("camMatrix", camMatrix);
 		m_modelShader.setUniform("modelMatrix", modelMatrix);
+		m_modelShader.setUniform("lightMatrix", lightMatrix);
 		m_modelShader.setUniform("camPos", m_camera.getPos());
 		m_modelShader.setUniform("lightAngle", m_lightAngle);
 		m_modelShader.setUniform("lightColor", m_lightColor);

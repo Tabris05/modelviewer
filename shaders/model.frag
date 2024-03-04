@@ -13,6 +13,7 @@ struct Material {
 	sampler2D metallicRoughnessMap;
 };
 
+in vec4 fPosLight;
 in vec3 fPos;
 in vec3 fNorm;
 in vec2 fUV;
@@ -23,6 +24,7 @@ uniform vec3 camPos;
 uniform vec3 lightAngle;
 uniform vec3 lightColor;
 uniform float lightIntensity;
+layout(bindless_sampler) uniform sampler2D shadowmapTex;
 
 layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	Material materials[];
@@ -59,6 +61,12 @@ float isotrophicNDFFilter(vec3 normal, float roughness) {
 	return sqrt(clamp(roughness2 + kernalRoughness2, 0.0f, 1.0f));
 }
 
+bool inShadow() {
+	float bias = mix(0.005f, 0.0f, dot(fNorm, lightAngle));
+	vec3 projectedPos = fPosLight.xyz / fPosLight.w * 0.5f + 0.5f;
+	return projectedPos.z - bias > texture(shadowmapTex, projectedPos.xy).r;
+}
+
 float ggxNDF(vec3 normal, vec3 halfway, float alpha) {
 	float alpha2 = alpha * alpha;
 	float nDotH = clampedDot(normal, halfway);
@@ -81,7 +89,8 @@ vec3 fresnelSchlick(vec3 halfway, vec3 viewDir, vec3 F0) {
 }
 
 vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, float roughness) {
-	if(lightColor == vec3(0.0f, 0.0f, 0.0f)) return vec3(0.0f, 0.0f, 0.0f);
+	if(lightColor == vec3(0.0f)) return vec3(0.0f);
+	else if(inShadow()) return vec3(0.0f);
 	vec3 halfway = normalize(viewDir + lightAngle);
 
 	vec3 F0 = mix(vec3(0.04f), albedo, metalness);
