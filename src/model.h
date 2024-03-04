@@ -14,6 +14,7 @@
 class Model {
 	public:
 		void draw();
+		AABB aabb() const;
 		glm::mat4 baseTransform() const;
 
 		static Model make(const std::filesystem::path& path);

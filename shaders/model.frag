@@ -77,7 +77,7 @@ float geometrySmith(vec3 normal, vec3 viewDir, vec3 lightAngle, float roughness)
 }
 
 vec3 fresnelSchlick(vec3 halfway, vec3 viewDir, vec3 F0) {
-	return F0 + (1.0f - F0) * pow(clamp(1.0f - clampedDot(halfway, viewDir), 0.0f, 1.0f), 5.0f);
+	return F0 + (1.0f - F0) * pow(1.0f - clampedDot(halfway, viewDir), 5.0f);
 }
 
 vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, float roughness) {

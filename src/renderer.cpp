@@ -62,13 +62,11 @@ Renderer Renderer::make() {
 
 	Camera camera = Camera::make(window, width, height);
 	Shader modelShader = Shader::make("shaders/model.vert", "shaders/model.frag");
-	Shader prepassShader = Shader::make("shaders/prepass.vert", "shaders/prepass.frag");
+	Shader depthShader = Shader::make("shaders/depth.vert", "shaders/depth.frag");
 	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
-	FrameBuffer postprocessingBuffer = FrameBuffer::make();
-	Texture postprocessingTarget = Texture::make2D(NULL, width, height, GL_RGB16F);
-	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	postprocessingShader.setUniform("inputTex", postprocessingTarget.makeBindless());
+	FrameBuffer shadowmapBuffer = FrameBuffer::make();
+	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT);
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
 	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(GL_RGB16F, width, height);
@@ -76,19 +74,26 @@ Renderer Renderer::make() {
 	multisampledBuffer.attachRenderBuffer(multisampledColorTarget, GL_COLOR_ATTACHMENT0);
 	multisampledBuffer.attachRenderBuffer(multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
 
+	FrameBuffer postprocessingBuffer = FrameBuffer::make();
+	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
+	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
+	postprocessingShader.setUniform("inputTex", postprocessingTarget.makeBindless());
+
 	return Renderer{ 
 		window,
 		width,
 		height,
 		std::move(camera),
 		std::move(modelShader),
-		std::move(prepassShader),
+		std::move(depthShader),
 		std::move(postprocessingShader),
-		std::move(postprocessingBuffer),
-		std::move(postprocessingTarget),
+		std::move(shadowmapBuffer),
 		std::move(multisampledBuffer),
+		std::move(postprocessingBuffer),
 		std::move(multisampledColorTarget),
-		std::move(multisampledDepthTarget)
+		std::move(multisampledDepthTarget),
+		std::move(shadowmapTarget),
+		std::move(postprocessingTarget)
 	};
 }
 
@@ -103,16 +108,29 @@ void Renderer::draw() {
 	if (m_model.has_value()) {
 		glm::mat4 camMatrix = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix();
 		glm::mat4 modelMatrix = m_model->baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
-		m_multisampledBuffer.bind();
 
-		// depth pass
+		AABB worldSpaceAABB = m_model->aabb().transform(modelMatrix);
+		glm::mat4 lightMatrix = glm::ortho(
+			-worldSpaceAABB.m_max.x,
+			-worldSpaceAABB.m_min.x,
+			worldSpaceAABB.m_min.y,
+			worldSpaceAABB.m_max.y,
+			worldSpaceAABB.m_min.z,
+			worldSpaceAABB.m_max.z
+		) * glm::lookAt(glm::vec3{ 0.0f }, m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
+
+		// shadow pass
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LEQUAL);
+		m_depthShader.bind();
+		//m_depthShader.setUniform("camMatrix", lightMatrix);
+		m_depthShader.setUniform("modelMatrix", modelMatrix);
+
+		// depth pass
+		m_multisampledBuffer.bind();
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-		m_prepassShader.bind();
-		m_prepassShader.setUniform("camMatrix", camMatrix);
-		m_prepassShader.setUniform("modelMatrix", modelMatrix);
+		m_depthShader.setUniform("camMatrix", camMatrix);
 		m_model->draw();
 
 		// color pass
@@ -228,24 +246,28 @@ Renderer::Renderer(
 	Shader modelShader,
 	Shader prepassShader,
 	Shader postprocessingShader,
-	FrameBuffer postprocessingBuffer,
-	Texture postprocessingTarget,
+	FrameBuffer shadowmapBuffer,
 	FrameBuffer multisampledBuffer,
+	FrameBuffer postprocessingBuffer,
 	RenderBuffer multisampledColorTarget,
-	RenderBuffer multisampledDepthTarget
+	RenderBuffer multisampledDepthTarget,
+	Texture shadowmapTarget,
+	Texture postprocessingTarget
 ) :
 	m_window{ window },
 	m_width{ width },
 	m_height{ height },
 	m_camera{ std::move(camera) },
 	m_modelShader{ std::move(modelShader) },
-	m_prepassShader{ std::move(prepassShader) },
+	m_depthShader{ std::move(prepassShader) },
 	m_postprocessingShader{ std::move(postprocessingShader) },
-	m_postprocessingBuffer{ std::move(postprocessingBuffer) },
-	m_postprocessingTarget{ std::move(postprocessingTarget) },
+	m_shadowmapBuffer{ std::move(shadowmapBuffer) },
 	m_multisampledBuffer{ std::move(multisampledBuffer) },
+	m_postprocessingBuffer{ std::move(postprocessingBuffer) },
 	m_multisampledColorTarget{ std::move(multisampledColorTarget) },
-	m_multisampledDepthTarget{ std::move(multisampledDepthTarget) } {
+	m_multisampledDepthTarget{ std::move(multisampledDepthTarget) },
+	m_shadowmapTarget{ std::move(shadowmapTarget) },
+	m_postprocessingTarget{ std::move(postprocessingTarget) } {
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(m_window, [] (GLFWwindow* window, int x, int y) { static_cast<Renderer*>(glfwGetWindowUserPointer(window))->resizeWindow(x, y); });
 }

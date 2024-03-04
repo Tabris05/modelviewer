@@ -12,10 +12,10 @@ class Texture {
 		std::optional<GLuint64> handle() const;
 
 		static Texture make2D(
-			unsigned char* data,
 			int width, 
 			int height,
 			GLenum internalFormat = GL_RGB8,
+			unsigned char* data = nullptr,
 			GLenum format = GL_RGB,
 			GLenum minFilter = GL_NEAREST,
 			GLenum magFilter = GL_NEAREST,

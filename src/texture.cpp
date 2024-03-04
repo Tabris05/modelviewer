@@ -15,7 +15,7 @@ std::optional<GLuint64> Texture::handle() const {
 	return m_handle;
 }
 
-Texture Texture::make2D(unsigned char* data, int width, int height, GLenum internalFormat, GLenum format, GLenum minFilter, GLenum magFilter, GLenum wrapS, GLenum wrapT) {
+Texture Texture::make2D(int width, int height, GLenum internalFormat, unsigned char* data, GLenum format, GLenum minFilter, GLenum magFilter, GLenum wrapS, GLenum wrapT) {
 	bool hasMipmaps = (minFilter & 0xFF00) == 0x2700;
 	
 	GLuint id;

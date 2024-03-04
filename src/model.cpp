@@ -14,6 +14,10 @@ void Model::draw() {
 	glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
 }
 
+AABB Model::aabb() const {
+	return m_aabb;
+}
+
 glm::mat4 Model::baseTransform() const {
 	return m_baseTransform;
 }
@@ -88,10 +92,10 @@ Model Model::make(const std::filesystem::path& path) {
 		}
 
 		maybeTextures[index] = Texture::make2D(
-			bytes,
 			width,
 			height,
 			internalFormat,
+			bytes,
 			format,
 			static_cast<GLenum>(curSampler.minFilter.value_or(fastgltf::Filter::LinearMipMapLinear)),
 			static_cast<GLenum>(curSampler.magFilter.value_or(fastgltf::Filter::Linear)),
@@ -118,7 +122,7 @@ Model Model::make(const std::filesystem::path& path) {
 			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex, true);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyAlbedo, 1, 1));
+			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyAlbedo));
 			val.m_albedoHandle = maybeTextures.back()->makeBindless();
 		}
 
@@ -126,7 +130,7 @@ Model Model::make(const std::filesystem::path& path) {
 			val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1));
+			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyMetallicRoughness));
 			val.m_albedoHandle = maybeTextures.back()->makeBindless();
 		}
 
@@ -134,7 +138,7 @@ Model Model::make(const std::filesystem::path& path) {
 			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyMetallicRoughness, 1, 1));
+			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyMetallicRoughness));
 			val.m_occlusionHandle = maybeTextures.back()->makeBindless();
 		}
 
@@ -142,7 +146,7 @@ Model Model::make(const std::filesystem::path& path) {
 			val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(dummyNormal, 1, 1));
+			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyNormal));
 			val.m_normalHandle = maybeTextures.back()->makeBindless();
 		}
 
@@ -229,22 +233,6 @@ Model Model::make(const std::filesystem::path& path) {
 	float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
 	glm::mat4 baseTransform = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	baseTransform = glm::scale(baseTransform, glm::vec3(scale));
-	glm::vec3 corners[8] = {
-		glm::vec3(aabb.m_min.x, aabb.m_min.y, aabb.m_min.z),
-		glm::vec3(aabb.m_max.x, aabb.m_min.y, aabb.m_min.z),
-		glm::vec3(aabb.m_max.x, aabb.m_max.y, aabb.m_min.z),
-		glm::vec3(aabb.m_min.x, aabb.m_max.y, aabb.m_min.z),
-		glm::vec3(aabb.m_min.x, aabb.m_min.y, aabb.m_max.z),
-		glm::vec3(aabb.m_max.x, aabb.m_min.y, aabb.m_max.z),
-		glm::vec3(aabb.m_max.x, aabb.m_max.y, aabb.m_max.z),
-		glm::vec3(aabb.m_min.x, aabb.m_max.y, aabb.m_max.z),
-	};
-	for (glm::vec3& i : corners) i = glm::vec3(baseTransform * glm::vec4(i, 1.0f));
-	aabb = AABB{};
-	for (glm::vec3 i : corners) {
-		aabb.m_min = glm::min(aabb.m_min, i);
-		aabb.m_max = glm::max(aabb.m_max, i);
-	}
 
 	return Model{ 
 		std::move(textures),

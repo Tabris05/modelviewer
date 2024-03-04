@@ -166,10 +166,10 @@
     <None Include="shaders\postprocessing.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="shaders\prepass.vert">
+    <None Include="shaders\depth.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="shaders\prepass.frag">
+    <None Include="shaders\depth.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

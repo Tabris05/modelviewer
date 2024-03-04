@@ -37,23 +37,27 @@ class Renderer {
 			Shader modelShader,
 			Shader prepassShader,
 			Shader postprocessingShader,
-			FrameBuffer postprocessingBuffer,
-			Texture postprocessingTarget,
+			FrameBuffer shadowmapBuffer,
 			FrameBuffer multisampledBuffer,
+			FrameBuffer postprocessingBuffer,
 			RenderBuffer multisampledColorTarget,
-			RenderBuffer multisampledDepthTarget
+			RenderBuffer multisampledDepthTarget,
+			Texture shadowmapTarget,
+			Texture postprocessingTarget
 		);
 		
 		Camera m_camera;
 		std::optional<Model> m_model;
 		Shader m_modelShader;
-		Shader m_prepassShader;
+		Shader m_depthShader;
 		Shader m_postprocessingShader;
-		FrameBuffer m_postprocessingBuffer;
-		Texture m_postprocessingTarget;
+		FrameBuffer m_shadowmapBuffer;
 		FrameBuffer m_multisampledBuffer;
+		FrameBuffer m_postprocessingBuffer;
 		RenderBuffer m_multisampledColorTarget;
 		RenderBuffer m_multisampledDepthTarget;
+		Texture m_shadowmapTarget;
+		Texture m_postprocessingTarget;
 		GLFWwindow* m_window;
 		int m_width, m_height;
 		double m_curFrame = 0.0f, m_lastFrame = 0.0f;
@@ -63,6 +67,8 @@ class Renderer {
 		float m_lightIntensity = 5.0f, m_fov = 90.0f, m_gamma = 2.2f, m_modelScale = 100.0f;
 		glm::quat m_modelRotation{ glm::mat4{ 1.0f } };
 		bool m_vsyncEnabled = true;
+
+		constexpr static inline int m_shadowmapResolution = 2048;
 };
 
 #endif
