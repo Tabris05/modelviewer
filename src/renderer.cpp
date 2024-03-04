@@ -4,6 +4,7 @@
 #include <imgui/imgui_stdlib.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <numbers>
 #include "dbg.h"
 
 void Renderer::run() {
@@ -111,11 +112,15 @@ void Renderer::draw() {
 	if (m_model.has_value()) {
 		glm::mat4 camMatrix = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix();
 		glm::mat4 modelMatrix = m_model->baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
-
-		AABB worldSpaceAABB = m_model->aabb().transform(modelMatrix);
+		//print(m_lightAngle.x << " " << m_lightAngle.y << " " << m_lightAngle.z);
+		AABB worldSpaceAABB = m_model->aabb().transform(
+			modelMatrix
+			* glm::rotate(glm::mat4{ 1.0f }, atan2f(sqrt(m_lightAngle.x * m_lightAngle.x + m_lightAngle.z * m_lightAngle.z), m_lightAngle.y) - std::numbers::pi_v<float> / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f))
+			* glm::rotate(glm::mat4{ 1.0f }, atan2f(m_lightAngle.x, m_lightAngle.z), glm::vec3(0.0f, 1.0f, 0.0f))
+		);
 		glm::mat4 lightMatrix = glm::ortho(
-			-worldSpaceAABB.m_max.x,
-			-worldSpaceAABB.m_min.x,
+			worldSpaceAABB.m_min.x,
+			worldSpaceAABB.m_max.x,
 			worldSpaceAABB.m_min.y,
 			worldSpaceAABB.m_max.y,
 			worldSpaceAABB.m_min.z,
