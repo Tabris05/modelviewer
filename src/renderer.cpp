@@ -81,7 +81,7 @@ Renderer Renderer::make() {
 	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	postprocessingShader.setUniform("inputTex", postprocessingTarget.makeBindless());
-	//postprocessingShader.setUniform("inputTex", shadowmapTarget.handle().value());
+	postprocessingShader.setUniform("inputTex", shadowmapTarget.handle().value());
 
 	return Renderer{ 
 		window,
@@ -114,18 +114,20 @@ void Renderer::draw() {
 		glm::mat4 modelMatrix = m_model->baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
 		//print(m_lightAngle.x << " " << m_lightAngle.y << " " << m_lightAngle.z);
 		AABB worldSpaceAABB = m_model->aabb().transform(
-			modelMatrix
+			m_model->baseTransform()
+			* glm::toMat4(m_modelRotation)
 			* glm::rotate(glm::mat4{ 1.0f }, atan2f(sqrt(m_lightAngle.x * m_lightAngle.x + m_lightAngle.z * m_lightAngle.z), m_lightAngle.y) - std::numbers::pi_v<float> / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f))
-			* glm::rotate(glm::mat4{ 1.0f }, atan2f(m_lightAngle.x, m_lightAngle.z), glm::vec3(0.0f, 1.0f, 0.0f))
+			* glm::rotate(glm::mat4{ 1.0f }, atan2f(m_lightAngle.x, m_lightAngle.z) - std::numbers::pi_v<float>, glm::vec3(0.0f, 1.0f, 0.0f))
+			* glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f })
 		);
 		glm::mat4 lightMatrix = glm::ortho(
-			worldSpaceAABB.m_min.x,
-			worldSpaceAABB.m_max.x,
+			-worldSpaceAABB.m_max.x,
+			-worldSpaceAABB.m_min.x,
 			worldSpaceAABB.m_min.y,
 			worldSpaceAABB.m_max.y,
 			worldSpaceAABB.m_min.z,
 			worldSpaceAABB.m_max.z
-		) * glm::lookAt(glm::vec3{ 0.0f }, -m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
+		) * glm::lookAt(glm::vec3{ 0.0f, 0.0f, 0.0f }, -m_lightAngle, glm::vec3{0.0f, 1.0f, 0.0f});
 
 		// shadow pass
 		glEnable(GL_DEPTH_TEST);
