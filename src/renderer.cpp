@@ -6,7 +6,6 @@
 #include <imgui/imgui_impl_opengl3.h>
 #include <numbers>
 #include "dbg.h"
-
 void Renderer::run() {
 
 	while (!glfwWindowShouldClose(m_window)) {
@@ -81,7 +80,6 @@ Renderer Renderer::make() {
 	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	postprocessingShader.setUniform("inputTex", postprocessingTarget.makeBindless());
-	postprocessingShader.setUniform("inputTex", shadowmapTarget.handle().value());
 
 	return Renderer{ 
 		window,
@@ -112,21 +110,17 @@ void Renderer::draw() {
 	if (m_model.has_value()) {
 		glm::mat4 camMatrix = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix();
 		glm::mat4 modelMatrix = m_model->baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
-		//print(m_lightAngle.x << " " << m_lightAngle.y << " " << m_lightAngle.z);
+		float azimuth = atan2f(sqrt(m_lightAngle.x * m_lightAngle.x + m_lightAngle.z * m_lightAngle.z), m_lightAngle.y) - std::numbers::pi_v<float> / 2.0f;
+		float polar = atan2f(m_lightAngle.x, m_lightAngle.z) - std::numbers::pi_v<float>;
 		AABB worldSpaceAABB = m_model->aabb().transform(
-			m_model->baseTransform()
-			* glm::toMat4(m_modelRotation)
-			* glm::rotate(glm::mat4{ 1.0f }, atan2f(sqrt(m_lightAngle.x * m_lightAngle.x + m_lightAngle.z * m_lightAngle.z), m_lightAngle.y) - std::numbers::pi_v<float> / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f))
-			* glm::rotate(glm::mat4{ 1.0f }, atan2f(m_lightAngle.x, m_lightAngle.z) - std::numbers::pi_v<float>, glm::vec3(0.0f, 1.0f, 0.0f))
-			* glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f })
+			modelMatrix
+			* glm::rotate(glm::mat4{ 1.0f }, azimuth, glm::vec3(1.0f, 0.0f, 0.0f))
+			* glm::rotate(glm::mat4{ 1.0f }, polar, glm::vec3(0.0f, 1.0f, 0.0f))
 		);
+		glm::vec3 maxBounds{ glm::max(glm::abs(worldSpaceAABB.m_min), glm::abs(worldSpaceAABB.m_max)) };
+		float maxElem = std::max(maxBounds.x, std::max(maxBounds.y, maxBounds.z));
 		glm::mat4 lightMatrix = glm::ortho(
-			-worldSpaceAABB.m_max.x,
-			-worldSpaceAABB.m_min.x,
-			worldSpaceAABB.m_min.y,
-			worldSpaceAABB.m_max.y,
-			worldSpaceAABB.m_min.z,
-			worldSpaceAABB.m_max.z
+			-maxElem, maxElem, -maxElem, maxElem, -maxElem, maxElem
 		) * glm::lookAt(glm::vec3{ 0.0f, 0.0f, 0.0f }, -m_lightAngle, glm::vec3{0.0f, 1.0f, 0.0f});
 
 		// shadow pass
