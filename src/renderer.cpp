@@ -198,9 +198,12 @@ void Renderer::drawModelMenu(float horizontalScale, float verticalScale) {
 	vgm::Quat inout{ m_modelRotation.w, m_modelRotation.x, m_modelRotation.y, m_modelRotation.z };
 	ImGui::Begin("Model");
 	ImGui::SetWindowPos(ImVec2{ 350.0f * horizontalScale, 0.0f });
-	ImGui::SetWindowSize(ImVec2{ 300.0f * horizontalScale, 200.0f * verticalScale });
+	ImGui::SetWindowSize(ImVec2{ 300.0f * horizontalScale, 205.0f * verticalScale });
 	ImGui::SliderFloat("Model Scale", &m_modelScale, 20.0f, 500.0f);
 	ImGui::gizmo3D("Model Rotation", inout, 125.0f * horizontalScale);
+	if (ImGui::Button("Reset Rotation")) {
+		inout = vgm::Quat{ 1.0f, 0.0f, 0.0f, 0.0f };
+	}
 	ImGui::End();
 	m_modelRotation = glm::quat(inout.w, inout.x, inout.y, inout.z);
 }
