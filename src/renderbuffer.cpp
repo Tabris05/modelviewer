@@ -4,14 +4,14 @@ GLuint RenderBuffer::id() const {
 	return m_id;
 }
 
-RenderBuffer RenderBuffer::make(GLenum internalFormat, int width, int height) {
+RenderBuffer RenderBuffer::make(int width, int height, GLenum internalFormat) {
 	GLuint id;
 	glCreateRenderbuffers(1, &id);
 	glNamedRenderbufferStorage(id, internalFormat, width, height);
 	return RenderBuffer{ id };
 }
 
-RenderBuffer RenderBuffer::makeMultisampled(GLenum internalFormat, int width, int height) {
+RenderBuffer RenderBuffer::makeMultisampled(int width, int height, GLenum internalFormat) {
 	GLuint id;
 	glCreateRenderbuffers(1, &id);
 	glNamedRenderbufferStorageMultisample(id, 8, internalFormat, width, height);

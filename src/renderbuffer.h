@@ -8,8 +8,8 @@ class RenderBuffer {
 	public:
 		GLuint id() const;
 
-		static RenderBuffer make(GLenum internalFormat, int width, int height);
-		static RenderBuffer makeMultisampled(GLenum internalFormat, int width, int height);
+		static RenderBuffer make(int width, int height, GLenum internalFormat);
+		static RenderBuffer makeMultisampled(int width, int height, GLenum internalFormat);
 		~RenderBuffer();
 	private:
 		RenderBuffer(GLuint id);
