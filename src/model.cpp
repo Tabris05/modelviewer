@@ -37,6 +37,8 @@ Model Model::make(const std::filesystem::path& path) {
 	std::vector<DrawCommand> cmds;
 	std::vector<Vertex> vertices;
 	std::vector<GLuint> indices;
+
+	// count number of primitives, vertices, and indices to preallocate vector with correct size
 	size_t numPrimitives = 0;
 	size_t verticesSize = 0;
 	size_t indicesSize = 0;
@@ -57,6 +59,7 @@ Model Model::make(const std::filesystem::path& path) {
 
 	AABB aabb{};
 	
+	// helper function that returns a handle to the ith texture, or loads it if it hasn't been loaded already
 	auto processTexture = [&](size_t index, bool srgb = false) -> GLuint64 {
 		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle().value();
 
@@ -97,6 +100,7 @@ Model Model::make(const std::filesystem::path& path) {
 			internalFormat,
 			bytes,
 			format,
+			GL_UNSIGNED_BYTE,
 			static_cast<GLenum>(curSampler.minFilter.value_or(fastgltf::Filter::LinearMipMapLinear)),
 			static_cast<GLenum>(curSampler.magFilter.value_or(fastgltf::Filter::Linear)),
 			static_cast<GLenum>(curSampler.wrapS),
@@ -108,6 +112,9 @@ Model Model::make(const std::filesystem::path& path) {
 		return maybeTextures[index].value().handle().value();
 	};
 
+	// build materials from base values and textures
+	// if a material does not specify a texture for a certain component then a 1x1 dummy texture is created
+	// this simplifies shader code by removing the need to check for the presence of textures in a material
 	for (const fastgltf::Material& curMaterial : asset.materials) {
 		unsigned char dummyAlbedo[] { 255, 255, 255, 255 };
 		unsigned char dummyMetallicRoughness[] { 255, 255, 255 };
@@ -153,10 +160,18 @@ Model Model::make(const std::filesystem::path& path) {
 		materials.emplace_back(val);
 	}
 
+	// textures originally pushed into an array of optionals because it was possible a given texture had not yet been loaded
+	// yet now all textures should have values so continuing to use them as optionals is unnecessary
 	for (const std::optional<Texture>& curTexture : maybeTextures) {
 		textures.emplace_back(curTexture.value());
 	}
 
+	// helper function to load meshes, called recursively to traverse the tree of nodes
+	// mesh vertices are transformed to a common model space before storage to avoid the need to store model matrices per mesh
+	// all vertices and indices are stored in a single shared vertex buffer and index buffer for use with multidrawindirect
+	// also, I am hijacking the baseinstance parameter of the draw commands to store an index into the materials buffer
+	// this is fine since the parameter appears to have no intrinsic meaning to the driver,
+	// and allows me to have a reliable way of getting the correct material index stored per-mesh regardless of draw order
 	auto processNode = [&](this auto& self, size_t index, glm::mat4 transform) -> void {
 		const fastgltf::Node& curNode = asset.nodes[index];
 		transform *= std::visit(fastgltf::visitor{

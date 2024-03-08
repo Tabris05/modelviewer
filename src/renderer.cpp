@@ -5,6 +5,7 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include <numbers>
+#include <random>
 #include "dbg.h"
 void Renderer::run() {
 
@@ -81,6 +82,12 @@ Renderer Renderer::make() {
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	postprocessingShader.setUniform("inputTex", postprocessingTarget.makeBindless());
 
+	Texture poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
+	modelShader.setUniform("poissonDiskTex", poissonDisks.makeBindless());
+	modelShader.setUniform("poissonDiskWindowSize", m_poissonDiskWindowSize);
+	modelShader.setUniform("poissonDiskFilterSize", m_poissonDiskFilterSize);
+	modelShader.setUniform("shadowmapSampleRadius", m_shadowmapSampleRadius * (1.0f / m_shadowmapResolution));
+
 	return Renderer{ 
 		window,
 		width,
@@ -95,7 +102,8 @@ Renderer Renderer::make() {
 		std::move(multisampledColorTarget),
 		std::move(multisampledDepthTarget),
 		std::move(shadowmapTarget),
-		std::move(postprocessingTarget)
+		std::move(postprocessingTarget),
+		std::move(poissonDisks)
 	};
 }
 
@@ -110,18 +118,7 @@ void Renderer::draw() {
 	if (m_model.has_value()) {
 		glm::mat4 camMatrix = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix();
 		glm::mat4 modelMatrix = m_model->baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
-		float azimuth = atan2f(sqrt(m_lightAngle.x * m_lightAngle.x + m_lightAngle.z * m_lightAngle.z), m_lightAngle.y) - std::numbers::pi_v<float> / 2.0f;
-		float polar = atan2f(m_lightAngle.x, m_lightAngle.z) - std::numbers::pi_v<float>;
-		AABB worldSpaceAABB = m_model->aabb().transform(
-			modelMatrix
-			* glm::rotate(glm::mat4{ 1.0f }, azimuth, glm::vec3(1.0f, 0.0f, 0.0f))
-			* glm::rotate(glm::mat4{ 1.0f }, polar, glm::vec3(0.0f, 1.0f, 0.0f))
-		);
-		glm::vec3 maxBounds{ glm::max(glm::abs(worldSpaceAABB.m_min), glm::abs(worldSpaceAABB.m_max)) };
-		float maxElem = std::max(maxBounds.x, std::max(maxBounds.y, maxBounds.z));
-		glm::mat4 lightMatrix = glm::ortho(
-			-maxElem, maxElem, -maxElem, maxElem, -maxElem, maxElem
-		) * glm::lookAt(glm::vec3{ 0.0f, 0.0f, 0.0f }, -m_lightAngle, glm::vec3{0.0f, 1.0f, 0.0f});
+		glm::mat4 lightMatrix = calcLightMatrix(modelMatrix);
 
 		// shadow pass
 		glEnable(GL_DEPTH_TEST);
@@ -129,7 +126,7 @@ void Renderer::draw() {
 		glDepthFunc(GL_LEQUAL);
 		glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
 		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(1.0f, 1.0f);
+		glPolygonOffset(10.0f, 1.0f);
 		m_shadowmapBuffer.bind();
 		glClear(GL_DEPTH_BUFFER_BIT);
 		m_depthShader.bind();
@@ -254,6 +251,43 @@ void Renderer::resizeWindow(int width, int height) {
 	draw();
 }
 
+// very messily calculates a somewhat conservative orthographic projection volume to fit the entire model in regardless of its transform or the light's position
+glm::mat4 Renderer::calcLightMatrix(glm::mat4 modelMatrix) {
+	// converts the light's position to spherical coordinates to transform the model relative to the light's viewing angle
+	float azimuth = atan2f(sqrt(m_lightAngle.x * m_lightAngle.x + m_lightAngle.z * m_lightAngle.z), m_lightAngle.y) - std::numbers::pi_v<float> / 2.0f;
+	float polar = atan2f(m_lightAngle.x, m_lightAngle.z) - std::numbers::pi_v<float>;
+	AABB worldSpaceAABB = m_model->aabb().transform(
+		modelMatrix
+		* glm::rotate(glm::mat4{ 1.0f }, azimuth, glm::vec3(1.0f, 0.0f, 0.0f))
+		* glm::rotate(glm::mat4{ 1.0f }, polar, glm::vec3(0.0f, 1.0f, 0.0f))
+	);
+	// the model will always fit within a bounding cube derived from the maximum dimension of its aabb
+	// not as conservative as I would like but I'm not good enough at math to find the actual correct formula
+	glm::vec3 maxBounds{ glm::max(glm::abs(worldSpaceAABB.m_min), glm::abs(worldSpaceAABB.m_max)) };
+	float maxElem = std::max(maxBounds.x, std::max(maxBounds.y, maxBounds.z));
+	return glm::ortho(-maxElem, maxElem, -maxElem, maxElem, -maxElem, maxElem) * glm::lookAt(glm::vec3{ 0.0f, 0.0f, 0.0f }, -m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
+}
+
+Texture Renderer::makeShadowmapNoise(int windowSize, int filterSize) {
+	std::vector<float> samples;
+	samples.reserve(windowSize * windowSize * filterSize * filterSize * 2);
+
+	std::default_random_engine generator;
+	std::uniform_real_distribution<float> distribution(-0.5f, 0.5f);
+
+	for (int i = 0; i < windowSize * windowSize; i++) {
+		for (int v = filterSize - 1; v >= 0; v--) {
+			for (int u = 0; u < filterSize; u++) {
+				float x = (u + 0.5f + distribution(generator)) / filterSize;
+				float y = (v + 0.5f + distribution(generator)) / filterSize;
+				samples.push_back(std::sqrtf(y) * std::cosf(2.0f * std::numbers::pi_v<float> * x));
+				samples.push_back(std::sqrtf(y) * std::sinf(2.0f * std::numbers::pi_v<float> * x));
+			}
+		}
+	}
+	return Texture::make3D(filterSize * filterSize, windowSize, windowSize, GL_RG32F, samples.data(), GL_RG, GL_FLOAT);
+}
+
 Renderer::Renderer(
 	GLFWwindow* window,
 	int width,
@@ -268,7 +302,8 @@ Renderer::Renderer(
 	RenderBuffer multisampledColorTarget,
 	RenderBuffer multisampledDepthTarget,
 	Texture shadowmapTarget,
-	Texture postprocessingTarget
+	Texture postprocessingTarget,
+	Texture poissonDisks
 ) :
 	m_window{ window },
 	m_width{ width },
@@ -283,7 +318,8 @@ Renderer::Renderer(
 	m_multisampledColorTarget{ std::move(multisampledColorTarget) },
 	m_multisampledDepthTarget{ std::move(multisampledDepthTarget) },
 	m_shadowmapTarget{ std::move(shadowmapTarget) },
-	m_postprocessingTarget{ std::move(postprocessingTarget) } {
+	m_postprocessingTarget{ std::move(postprocessingTarget) },
+	m_poissonDisks{ std::move(poissonDisks) } {
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(m_window, [] (GLFWwindow* window, int x, int y) { static_cast<Renderer*>(glfwGetWindowUserPointer(window))->resizeWindow(x, y); });
 }

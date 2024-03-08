@@ -24,7 +24,12 @@ uniform vec3 camPos;
 uniform vec3 lightAngle;
 uniform vec3 lightColor;
 uniform float lightIntensity;
+
 layout(bindless_sampler) uniform sampler2D shadowmapTex;
+layout(bindless_sampler) uniform sampler3D poissonDiskTex;
+uniform int poissonDiskWindowSize;
+uniform int poissonDiskFilterSize;
+uniform float shadowmapSampleRadius;
 
 layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	Material materials[];
@@ -61,10 +66,29 @@ float isotrophicNDFFilter(vec3 normal, float roughness) {
 	return sqrt(clamp(roughness2 + kernalRoughness2, 0.0f, 1.0f));
 }
 
-bool inShadow() {
-	float bias = mix(0.005f, 0.0f, dot(fNorm, lightAngle));
+float inShadow() {
+	float result = 0.0f;
+	float bias = mix(0.01f, 0.0f, dot(fNorm, lightAngle));
 	vec3 projectedPos = fPosLight.xyz / fPosLight.w * 0.5f + 0.5f;
-	return projectedPos.z - bias > texture(shadowmapTex, projectedPos.xy).r;
+	ivec3 offset = ivec3(0, ivec2(mod(gl_FragCoord.xy, ivec2(poissonDiskWindowSize))));
+	for(int i = 0; i < poissonDiskFilterSize; i++) {
+		float cur = 0.0f;
+		for(int j = 0; j < poissonDiskFilterSize; j++) {
+			// filter is 2d data stored in 1d, so offset must be a flattened 2d coordinate
+			offset.x = i * poissonDiskFilterSize + j;
+			vec2 samplePoint = projectedPos.xy + texelFetch(poissonDiskTex, offset, 0).rg * shadowmapSampleRadius;
+			cur += float(projectedPos.z - bias > texture(shadowmapTex, samplePoint).r);
+		}
+		// if all samples produced the same result we assume any subsequent samples will as well and break early
+		if(cur == 0.0f || cur == 1.0f) {
+			result += cur * (poissonDiskFilterSize - i - 1);
+			break;
+		}
+		else {
+			result += cur;
+		}
+	}
+	return 1.0f - result / (poissonDiskFilterSize * poissonDiskFilterSize);
 }
 
 float ggxNDF(vec3 normal, vec3 halfway, float alpha) {
@@ -90,9 +114,10 @@ vec3 fresnelSchlick(vec3 halfway, vec3 viewDir, vec3 F0) {
 
 vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, float roughness) {
 	if(lightColor == vec3(0.0f)) return vec3(0.0f);
-	else if(inShadow()) return vec3(0.0f);
-	vec3 halfway = normalize(viewDir + lightAngle);
+	float shadow = inShadow();
+	if(shadow == 0.0f) return vec3(0.0f);
 
+	vec3 halfway = normalize(viewDir + lightAngle);
 	vec3 F0 = mix(vec3(0.04f), albedo, metalness);
 
 	float distribution = ggxNDF(normal, halfway, roughness * roughness);
@@ -104,7 +129,7 @@ vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, f
 	
 	vec3 specular = numerator / denominator;
 	vec3 diffuse = (vec3(1.0f) - fresnel) * (1.0f - metalness) * albedo / PI;
-	return (diffuse + specular) * clampedDot(normal, lightAngle) * lightColor * lightIntensity;
+	return (diffuse + specular) * clampedDot(normal, lightAngle) * lightColor * lightIntensity * shadow;
 }
 
 vec3 ambientLight(vec3 albedo, float occlusion) {

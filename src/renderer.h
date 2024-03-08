@@ -29,6 +29,9 @@ class Renderer {
 		void drawAssetMenu(float horizontalScale, float verticalScale);
 		void resizeWindow(int width, int height);
 
+		glm::mat4 calcLightMatrix(glm::mat4 modelMatrix);
+		static Texture makeShadowmapNoise(int windowSize, int filterSize);
+
 		Renderer(
 			GLFWwindow* window,
 			int width,
@@ -43,7 +46,8 @@ class Renderer {
 			RenderBuffer multisampledColorTarget,
 			RenderBuffer multisampledDepthTarget,
 			Texture shadowmapTarget,
-			Texture postprocessingTarget
+			Texture postprocessingTarget,
+			Texture poissonDisks
 		);
 		
 		Camera m_camera;
@@ -58,6 +62,7 @@ class Renderer {
 		RenderBuffer m_multisampledDepthTarget;
 		Texture m_shadowmapTarget;
 		Texture m_postprocessingTarget;
+		Texture m_poissonDisks;
 		GLFWwindow* m_window;
 		int m_width, m_height;
 		double m_curFrame = 0.0f, m_lastFrame = 0.0f;
@@ -69,6 +74,9 @@ class Renderer {
 		bool m_vsyncEnabled = true;
 
 		constexpr static inline int m_shadowmapResolution = 2048;
+		constexpr static inline int m_poissonDiskWindowSize = 8;
+		constexpr static inline int m_poissonDiskFilterSize = 16;
+		constexpr static inline float m_shadowmapSampleRadius = 4.0f;
 };
 
 #endif
