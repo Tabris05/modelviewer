@@ -69,7 +69,7 @@ Renderer Renderer::make() {
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
 	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT24);
 	shadowmapBuffer.attachTexture(shadowmapTarget, GL_DEPTH_ATTACHMENT);
-	modelShader.setUniform("shadowmapTex", shadowmapTarget.makeBindless());
+	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
 	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
@@ -80,10 +80,10 @@ Renderer Renderer::make() {
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
 	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	postprocessingShader.setUniform("inputTex", postprocessingTarget.makeBindless());
+	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle());
 
 	Texture poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
-	modelShader.setUniform("poissonDiskTex", poissonDisks.makeBindless());
+	modelShader.setUniform("poissonDiskTex", poissonDisks.handle());
 	modelShader.setUniform("poissonDiskWindowSize", m_poissonDiskWindowSize);
 	modelShader.setUniform("poissonDiskFilterSize", m_poissonDiskFilterSize);
 	modelShader.setUniform("shadowmapSampleRadius", m_shadowmapSampleRadius * (1.0f / m_shadowmapResolution));
@@ -242,7 +242,7 @@ void Renderer::resizeWindow(int width, int height) {
 	m_camera.updateSize(width, height);
 	m_postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.makeBindless());
+	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.handle());
 	m_multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
 	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);

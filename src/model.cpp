@@ -61,7 +61,7 @@ Model Model::make(const std::filesystem::path& path) {
 	
 	// helper function that returns a handle to the ith texture, or loads it if it hasn't been loaded already
 	auto processTexture = [&](size_t index, bool srgb = false) -> GLuint64 {
-		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle().value();
+		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle();
 
 		const fastgltf::Texture& curTexture = asset.textures[index];
 
@@ -107,9 +107,9 @@ Model Model::make(const std::filesystem::path& path) {
 			static_cast<GLenum>(curSampler.wrapT)
 		);
 
-		maybeTextures[index]->makeBindless();
+		maybeTextures[index]->handle();
 		stbi_image_free(bytes);
-		return maybeTextures[index].value().handle().value();
+		return maybeTextures[index].value().handle();
 	};
 
 	// build materials from base values and textures
@@ -130,7 +130,7 @@ Model Model::make(const std::filesystem::path& path) {
 		}
 		else {
 			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyAlbedo));
-			val.m_albedoHandle = maybeTextures.back()->makeBindless();
+			val.m_albedoHandle = maybeTextures.back()->handle();
 		}
 
 		if (curMaterial.pbrData.metallicRoughnessTexture.has_value()) {
@@ -138,7 +138,7 @@ Model Model::make(const std::filesystem::path& path) {
 		}
 		else {
 			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyMetallicRoughness));
-			val.m_albedoHandle = maybeTextures.back()->makeBindless();
+			val.m_albedoHandle = maybeTextures.back()->handle();
 		}
 
 		if (curMaterial.occlusionTexture.has_value()) {
@@ -146,7 +146,7 @@ Model Model::make(const std::filesystem::path& path) {
 		}
 		else {
 			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyMetallicRoughness));
-			val.m_occlusionHandle = maybeTextures.back()->makeBindless();
+			val.m_occlusionHandle = maybeTextures.back()->handle();
 		}
 
 		if (curMaterial.normalTexture.has_value()) {
@@ -154,7 +154,7 @@ Model Model::make(const std::filesystem::path& path) {
 		}
 		else {
 			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyNormal));
-			val.m_normalHandle = maybeTextures.back()->makeBindless();
+			val.m_normalHandle = maybeTextures.back()->handle();
 		}
 
 		materials.emplace_back(val);
