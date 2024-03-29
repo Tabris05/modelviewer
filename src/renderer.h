@@ -65,12 +65,16 @@ class Renderer {
 		Texture m_poissonDisks;
 		GLFWwindow* m_window;
 		int m_width, m_height;
-		double m_curFrame = 0.0f, m_lastFrame = 0.0f;
+		double m_curFrame = 0.0, m_lastFrame = 0.0;
 
-		std::string m_modelPath;
+		size_t m_framesThisSecond = 0;
+		double m_lastSecond = 0.0;
+		double m_fpsLastSecond = 0.0;
+
+		std::string m_modelPath, m_skyboxPath;
 		glm::vec3 m_lightAngle{ 0.0f, 0.0f, -1.0f }, m_lightColor{ 0.98f, 0.90f, 0.74f };
-		float m_lightIntensity = 5.0f, m_fov = 90.0f, m_gamma = 2.2f, m_modelScale = 100.0f;
 		glm::quat m_modelRotation{ glm::mat4{ 1.0f } };
+		float m_lightIntensity = 5.0f, m_fov = 90.0f, m_gamma = 2.2f, m_modelScale = 100.0f;
 		bool m_vsyncEnabled = true;
 
 		constexpr static inline int m_shadowmapResolution = 2048;

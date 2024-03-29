@@ -15,7 +15,7 @@ public:
 	static ShaderStorageBuffer make(const std::vector<T>& bufferData) {
 		GLuint id;
 		glCreateBuffers(1, &id);
-		glNamedBufferData(id, bufferData.size() * sizeof(T), bufferData.data(), GL_STATIC_DRAW);
+		glNamedBufferStorage(id, bufferData.size() * sizeof(T), bufferData.data(), NULL);
 		return ShaderStorageBuffer{ id };
 	}
 	~ShaderStorageBuffer();

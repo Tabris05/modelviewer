@@ -34,7 +34,7 @@ Skybox Skybox::make(const char* path) {
     Shader skyboxConversionShader = Shader::make("shaders/cubemap.vert", "shaders/skyboxconversion.frag");
     glViewport(0, 0, cubemapSize, cubemapSize);
 
-
+    return Skybox{ Texture::makeCube(1, 1) };
 }
 
 Skybox::Skybox(Texture skyboxTex) : m_skyboxTex{ std::move(skyboxTex) }  {}

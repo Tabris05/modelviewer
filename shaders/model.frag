@@ -25,11 +25,11 @@ uniform vec3 lightAngle;
 uniform vec3 lightColor;
 uniform float lightIntensity;
 
-layout(bindless_sampler) uniform sampler2D shadowmapTex;
-layout(bindless_sampler) uniform sampler3D poissonDiskTex;
 uniform int poissonDiskWindowSize;
 uniform int poissonDiskFilterSize;
 uniform float shadowmapSampleRadius;
+layout(bindless_sampler) uniform sampler2D shadowmapTex;
+layout(bindless_sampler) uniform sampler3D poissonDiskTex;
 
 layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	Material materials[];

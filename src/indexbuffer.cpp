@@ -21,7 +21,7 @@ GLuint IndexBuffer::id() const {
 IndexBuffer IndexBuffer::make(const std::vector<GLuint>& indices) {
 	GLuint id;
 	glCreateBuffers(1, &id);
-	glNamedBufferData(id, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
+	glNamedBufferStorage(id, indices.size() * sizeof(GLuint), indices.data(), NULL);
 	return IndexBuffer{ id };
 }
 

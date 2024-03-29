@@ -23,7 +23,12 @@ void Renderer::run() {
 		m_lastFrame = m_curFrame;
 		m_curFrame = glfwGetTime();
 
-		checkErr();
+		m_framesThisSecond++;
+		if (m_curFrame - m_lastSecond >= 1.0) {
+			m_fpsLastSecond = m_framesThisSecond / (m_curFrame - m_lastSecond);
+			m_lastSecond = m_curFrame;
+			m_framesThisSecond = 0;
+		}
 	}
 }
 
@@ -34,10 +39,6 @@ Renderer Renderer::make() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_SAMPLES, 8);
 
-#ifdef NDEBUG
-	glfwWindowHint(GLFW_CONTEXT_NO_ERROR, GLFW_NO_ERROR);
-#endif
-
 	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 	int width = mode->width * 3 / 4;
 	int height = mode->height * 3 / 4;
@@ -47,8 +48,14 @@ Renderer Renderer::make() {
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(0);
 
-	gladLoadGL();
+	gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress));
 	glViewport(0, 0, width, height);
+
+#ifdef NDEBUG
+	glfwWindowHint(GLFW_CONTEXT_NO_ERROR, GLFW_NO_ERROR);
+#else
+	installDbgCallback();
+#endif
 
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glEnable(GL_DEPTH_TEST);
@@ -215,7 +222,7 @@ void Renderer::drawOptionsMenu(float horizontalScale, float verticalScale) {
 	ImGui::Checkbox("VSync", &m_vsyncEnabled);
 	ImGui::NewLine();
 	ImGui::Text("Performance");
-	ImGui::Text("%.0f FPS, %.2fms", 1.0 / (m_curFrame - m_lastFrame), 1000.0 * (m_curFrame - m_lastFrame));
+	ImGui::Text("%.0f FPS, %.2fms", m_fpsLastSecond, 1000.0 / m_fpsLastSecond);
 	ImGui::End();
 }
 

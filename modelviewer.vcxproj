@@ -159,6 +159,7 @@
     <ClCompile Include="lib\stb.c" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\commandbuffer.cpp" />
+    <ClCompile Include="src\dbg.cpp" />
     <ClCompile Include="src\framebuffer.cpp" />
     <ClCompile Include="src\indexbuffer.cpp" />
     <ClCompile Include="src\main.cpp" />
