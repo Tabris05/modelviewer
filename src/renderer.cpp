@@ -140,8 +140,8 @@ void Renderer::draw() {
 
 	// shadow pass
 	glDepthMask(GL_TRUE);
-	glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
 	glEnable(GL_POLYGON_OFFSET_FILL);
+	glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
 	m_shadowmapBuffer.bind();
 	glClear(GL_DEPTH_BUFFER_BIT);
 	m_depthShader.bind();

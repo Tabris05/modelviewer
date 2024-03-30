@@ -11,7 +11,7 @@
 #include "dbg.h"
 
 void Model::draw() {
-	glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
+	if(m_cmdBuf.numCommands() > 0) glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
 }
 
 AABB Model::aabb() const {
