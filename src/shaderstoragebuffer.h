@@ -18,8 +18,9 @@ public:
 		glNamedBufferStorage(id, bufferData.size() * sizeof(T), bufferData.data(), NULL);
 		return ShaderStorageBuffer{ id };
 	}
+	static ShaderStorageBuffer make();
 	~ShaderStorageBuffer();
-
+	void test(const std::vector<int>& bufferData = std::vector<int>{}) {};
 private:
 	ShaderStorageBuffer(GLuint id);
 

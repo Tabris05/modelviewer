@@ -11,7 +11,7 @@ public:
 	void unbind();
 	GLuint id() const;
 
-	static IndexBuffer make(const std::vector<GLuint>& indices);
+	static IndexBuffer make(const std::vector<GLuint>& indices = std::vector<GLuint>{});
 	~IndexBuffer();
 private:
 	IndexBuffer(GLuint id);

@@ -4,6 +4,7 @@
 #include <imgui/imgui_stdlib.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <stb/stb_image.h>
 #include <numbers>
 #include <random>
 #include "dbg.h"
@@ -59,18 +60,26 @@ Renderer Renderer::make() {
 
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_CULL_FACE);
+
+	glPolygonOffset(10.0f, 1.0f);
+	glDepthFunc(GL_LEQUAL);
 	glCullFace(GL_BACK);
 
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460 core");
 
+
+	Model model = Model::make();
+	Skybox skybox = Skybox::make();
+
 	Camera camera = Camera::make(window, width, height);
+
 	Shader modelShader = Shader::make("shaders/model.vert", "shaders/model.frag");
 	Shader depthShader = Shader::make("shaders/depth.vert", "shaders/depth.frag");
+	Shader skyboxShader = Shader::make("shaders/cubemap.vert", "shaders/cubemap.frag");
 	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
@@ -99,9 +108,12 @@ Renderer Renderer::make() {
 		window,
 		width,
 		height,
+		std::move(model),
+		std::move(skybox),
 		std::move(camera),
 		std::move(modelShader),
 		std::move(depthShader),
+		std::move(skyboxShader),
 		std::move(postprocessingShader),
 		std::move(shadowmapBuffer),
 		std::move(multisampledBuffer),
@@ -120,56 +132,57 @@ Renderer::~Renderer() {
 }
 
 void Renderer::draw() {
-	// begin frame
 	float horizontalScale = m_width / 1920.0f, verticalScale = m_height / 1080.0f;
-	if (m_model.has_value()) {
-		glm::mat4 camMatrix = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix();
-		glm::mat4 modelMatrix = m_model->baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
-		glm::mat4 lightMatrix = calcLightMatrix(modelMatrix);
+	glm::mat4 camMatrix = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix();
+	glm::mat4 camMatrixNoTranslation = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * glm::mat4{ glm::mat3{ m_camera.getViewMatrix() } };
+	glm::mat4 modelMatrix = m_model.baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
+	glm::mat4 lightMatrix = calcLightMatrix(modelMatrix);
 
-		// shadow pass
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
-		glDepthFunc(GL_LEQUAL);
-		glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(10.0f, 1.0f);
-		m_shadowmapBuffer.bind();
-		glClear(GL_DEPTH_BUFFER_BIT);
-		m_depthShader.bind();
-		m_depthShader.setUniform("camMatrix", lightMatrix);
-		m_depthShader.setUniform("modelMatrix", modelMatrix);
-		m_model->draw();
+	// shadow pass
+	glDepthMask(GL_TRUE);
+	glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	m_shadowmapBuffer.bind();
+	glClear(GL_DEPTH_BUFFER_BIT);
+	m_depthShader.bind();
+	m_depthShader.setUniform("camMatrix", lightMatrix);
+	m_depthShader.setUniform("modelMatrix", modelMatrix);
+	m_model.draw();
 
-		// depth pass
-		glDisable(GL_POLYGON_OFFSET_FILL);
-		glViewport(0, 0, m_width, m_height);
-		m_multisampledBuffer.bind();
-		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-		m_depthShader.setUniform("camMatrix", camMatrix);
-		m_model->draw();
+	// depth pass
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	glViewport(0, 0, m_width, m_height);
+	m_multisampledBuffer.bind();
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	m_depthShader.setUniform("camMatrix", camMatrix);
+	m_model.draw();
 
-		// color pass
-		glDepthMask(GL_FALSE);
-		glDepthFunc(GL_EQUAL);
-		m_modelShader.bind();
-		m_modelShader.setUniform("camMatrix", camMatrix);
-		m_modelShader.setUniform("modelMatrix", modelMatrix);
-		m_modelShader.setUniform("lightMatrix", lightMatrix);
-		m_modelShader.setUniform("camPos", m_camera.getPos());
-		m_modelShader.setUniform("lightAngle", m_lightAngle);
-		m_modelShader.setUniform("lightColor", m_lightColor);
-		m_modelShader.setUniform("lightIntensity", m_lightIntensity);
-		m_model->draw();
+	// color pass
+	glDepthMask(GL_FALSE);
+	m_modelShader.bind();
+	m_modelShader.setUniform("camMatrix", camMatrix);
+	m_modelShader.setUniform("modelMatrix", modelMatrix);
+	m_modelShader.setUniform("lightMatrix", lightMatrix);
+	m_modelShader.setUniform("camPos", m_camera.getPos());
+	m_modelShader.setUniform("lightAngle", m_lightAngle);
+	m_modelShader.setUniform("lightColor", m_lightColor);
+	m_modelShader.setUniform("lightIntensity", m_lightIntensity);
+	m_model.draw();
 
-		// post processing pass
-		glDisable(GL_DEPTH_TEST);
-		m_multisampledBuffer.blitTo(m_postprocessingBuffer, GL_COLOR_BUFFER_BIT, m_width, m_height);
-		m_multisampledBuffer.unbind();
-		m_postprocessingShader.bind();
-		m_postprocessingShader.setUniform("gamma", m_gamma);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-	}
+	// skybox pass
+	m_skyboxShader.bind();
+	m_skyboxShader.setUniform("camMatrix", camMatrixNoTranslation);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	// post processing pass
+	glDisable(GL_DEPTH_TEST);
+	m_multisampledBuffer.blitTo(m_postprocessingBuffer, GL_COLOR_BUFFER_BIT, m_width, m_height);
+	m_multisampledBuffer.unbind();
+	m_postprocessingShader.bind();
+	m_postprocessingShader.setUniform("gamma", m_gamma);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glEnable(GL_DEPTH_TEST);
+
 	// UI pass
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -181,7 +194,6 @@ void Renderer::draw() {
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-	// end frame
 	glfwSwapBuffers(m_window);
 }
 
@@ -239,6 +251,17 @@ void Renderer::drawAssetMenu(float horizontalScale, float verticalScale) {
 	ImGui::SameLine();
 	ImGui::PushItemWidth(400.0f * horizontalScale);
 	ImGui::InputText("##modelload", &m_modelPath);
+	if (ImGui::Button("Load skybox")) {
+		std::filesystem::path skyboxPath{ m_skyboxPath };
+		if (std::filesystem::exists(skyboxPath) && skyboxPath.extension() == ".hdr") {
+			m_skybox = std::move(Skybox::make(skyboxPath));
+			m_skyboxShader.setUniform("skyboxTex", m_skybox.skyboxTexHandle());
+		}
+	}
+	ImGui::SameLine();
+	ImGui::PushItemWidth(400.0f * horizontalScale);
+	ImGui::InputText("##skyboxload", &m_skyboxPath);
+	
 	
 	ImGui::End();
 }
@@ -263,7 +286,7 @@ glm::mat4 Renderer::calcLightMatrix(glm::mat4 modelMatrix) {
 	// converts the light's position to spherical coordinates to transform the model relative to the light's viewing angle
 	float azimuth = atan2f(sqrt(m_lightAngle.x * m_lightAngle.x + m_lightAngle.z * m_lightAngle.z), m_lightAngle.y) - std::numbers::pi_v<float> / 2.0f;
 	float polar = atan2f(m_lightAngle.x, m_lightAngle.z) - std::numbers::pi_v<float>;
-	AABB worldSpaceAABB = m_model->aabb().transform(
+	AABB worldSpaceAABB = m_model.aabb().transform(
 		modelMatrix
 		* glm::rotate(glm::mat4{ 1.0f }, azimuth, glm::vec3(1.0f, 0.0f, 0.0f))
 		* glm::rotate(glm::mat4{ 1.0f }, polar, glm::vec3(0.0f, 1.0f, 0.0f))
@@ -299,9 +322,12 @@ Renderer::Renderer(
 	GLFWwindow* window,
 	int width,
 	int height,
+	Model model,
+	Skybox skybox,
 	Camera camera,
 	Shader modelShader,
-	Shader prepassShader,
+	Shader depthShader,
+	Shader skyboxShader,
 	Shader postprocessingShader,
 	FrameBuffer shadowmapBuffer,
 	FrameBuffer multisampledBuffer,
@@ -315,9 +341,12 @@ Renderer::Renderer(
 	m_window{ window },
 	m_width{ width },
 	m_height{ height },
+	m_model{ std::move(model) },
+	m_skybox{ std::move(skybox) },
 	m_camera{ std::move(camera) },
 	m_modelShader{ std::move(modelShader) },
-	m_depthShader{ std::move(prepassShader) },
+	m_depthShader{ std::move(depthShader) },
+	m_skyboxShader{ std::move(skyboxShader) },
 	m_postprocessingShader{ std::move(postprocessingShader) },
 	m_shadowmapBuffer{ std::move(shadowmapBuffer) },
 	m_multisampledBuffer{ std::move(multisampledBuffer) },

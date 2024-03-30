@@ -17,6 +17,7 @@ class Model {
 		AABB aabb() const;
 		glm::mat4 baseTransform() const;
 
+		static Model make();
 		static Model make(const std::filesystem::path& path);
 
 	private:

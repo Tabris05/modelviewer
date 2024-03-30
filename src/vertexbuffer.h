@@ -12,7 +12,7 @@ class VertexBuffer {
 		void unbind();
 		GLuint id() const;
 
-		static VertexBuffer make(const std::vector<Vertex>& vertices);
+		static VertexBuffer make(const std::vector<Vertex>& vertices = std::vector<Vertex>{});
 		~VertexBuffer();
 
 	private:

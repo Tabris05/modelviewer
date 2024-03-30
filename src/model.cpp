@@ -22,6 +22,30 @@ glm::mat4 Model::baseTransform() const {
 	return m_baseTransform;
 }
 
+Model Model::make() {
+	std::vector<Texture> textures;
+	ShaderStorageBuffer materialBuf = ShaderStorageBuffer::make();
+	CommandBuffer cmdBuf = CommandBuffer::make();
+	VertexBuffer vBuf = VertexBuffer::make();
+	IndexBuffer iBuf = IndexBuffer::make();
+	VertexArray vArr = VertexArray::make();
+	glm::mat4 baseTransform{ 1.0f };
+	AABB aabb{ glm::vec3{ 0.0f }, glm::vec3{ 0.0f } };
+	vArr.linkVertexBuffer(vBuf, sizeof(Vertex));
+	vArr.linkIndexBuffer(iBuf);
+	vArr.bind();
+	return Model{
+		std::move(textures),
+		std::move(materialBuf),
+		std::move(cmdBuf),
+		std::move(vBuf),
+		std::move(iBuf),
+		std::move(vArr),
+		baseTransform,
+		aabb
+	};
+}
+
 Model Model::make(const std::filesystem::path& path) {
 	fastgltf::GltfDataBuffer data;
 	data.loadFromFile(path);

@@ -1,11 +1,15 @@
 #ifndef SKYBOX_H
 #define SKYBOX_H
 
+#include <filesystem>
 #include "texture.h"
 
 class Skybox {
 	public:
-		static Skybox make(const char* path);
+		GLuint64 skyboxTexHandle() const;
+
+		static Skybox make();
+		static Skybox make(const std::filesystem::path& path);
 	private:
 		Skybox(Texture skyboxTex);
 

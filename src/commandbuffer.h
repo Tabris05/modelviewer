@@ -13,7 +13,7 @@ public:
 	GLuint id() const;
 	size_t numCommands() const;
 
-	static CommandBuffer make(const std::vector<DrawCommand>& cmds);
+	static CommandBuffer make(const std::vector<DrawCommand>& cmds = std::vector<DrawCommand>{});
 	~CommandBuffer();
 
 private:

@@ -2,7 +2,6 @@
 #define RENDERER_H
 
 #define GLM_ENABLE_EXPERIMENTAL 1
-#include <optional>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/glm.hpp>
 #include <glad/glad.h>
@@ -11,6 +10,7 @@
 #include "model.h"
 #include "shader.h"
 #include "texture.h"
+#include "skybox.h"
 #include "framebuffer.h"
 #include "renderbuffer.h"
 
@@ -36,9 +36,12 @@ class Renderer {
 			GLFWwindow* window,
 			int width,
 			int height,
+			Model model,
+			Skybox skybox,
 			Camera camera,
 			Shader modelShader,
-			Shader prepassShader,
+			Shader depthShader,
+			Shader skyboxShader,
 			Shader postprocessingShader,
 			FrameBuffer shadowmapBuffer,
 			FrameBuffer multisampledBuffer,
@@ -50,10 +53,12 @@ class Renderer {
 			Texture poissonDisks
 		);
 		
+		Model m_model;
+		Skybox m_skybox;
 		Camera m_camera;
-		std::optional<Model> m_model;
 		Shader m_modelShader;
 		Shader m_depthShader;
+		Shader m_skyboxShader;
 		Shader m_postprocessingShader;
 		FrameBuffer m_shadowmapBuffer;
 		FrameBuffer m_multisampledBuffer;

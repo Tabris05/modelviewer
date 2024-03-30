@@ -183,5 +183,7 @@
     </None>
     <None Include="shaders\cubemap.vert" />
     <None Include="shaders\skyboxconversion.frag" />
+    <None Include="shaders\cubemap.frag" />
+    <None Include="shaders\skyboxconversion.vert" />
   </ItemGroup>
 </Project>

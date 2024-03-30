@@ -8,6 +8,12 @@ GLuint ShaderStorageBuffer::id() const {
 	return m_id;
 }
 
+ShaderStorageBuffer ShaderStorageBuffer::make() {
+	GLuint id;
+	glCreateBuffers(1, &id);
+	return ShaderStorageBuffer{ id };
+}
+
 ShaderStorageBuffer::~ShaderStorageBuffer() {
 	if (m_rc.count() == 0) glDeleteBuffers(1, &m_id);
 }

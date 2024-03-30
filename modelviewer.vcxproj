@@ -196,6 +196,7 @@
     <ClInclude Include="src\vertexbuffer.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\cubemap.frag" />
     <None Include="shaders\cubemap.vert" />
     <None Include="shaders\model.frag" />
     <None Include="shaders\model.vert" />
@@ -204,6 +205,7 @@
     <None Include="shaders\depth.frag" />
     <None Include="shaders\depth.vert" />
     <None Include="shaders\skyboxconversion.frag" />
+    <None Include="shaders\skyboxconversion.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
