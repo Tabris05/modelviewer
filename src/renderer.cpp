@@ -98,8 +98,9 @@ Renderer Renderer::make() {
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle());
 
-	Texture poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
-	modelShader.setUniform("poissonDiskTex", poissonDisks.handle());
+	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
+	poissonDisks.bind(1);
+
 	modelShader.setUniform("poissonDiskWindowSize", m_poissonDiskWindowSize);
 	modelShader.setUniform("poissonDiskFilterSize", m_poissonDiskFilterSize);
 	modelShader.setUniform("shadowmapSampleRadius", m_shadowmapSampleRadius * (1.0f / m_shadowmapResolution));
@@ -298,16 +299,16 @@ glm::mat4 Renderer::calcLightMatrix(glm::mat4 modelMatrix) {
 	return glm::ortho(-maxElem, maxElem, -maxElem, maxElem, -maxElem, maxElem) * glm::lookAt(glm::vec3{ 0.0f, 0.0f, 0.0f }, -m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
 }
 
-Texture Renderer::makeShadowmapNoise(int windowSize, int filterSize) {
+ShaderStorageBuffer Renderer::makeShadowmapNoise(int windowSize, int filterSize) {
 	std::vector<float> samples;
 	samples.reserve(windowSize * windowSize * filterSize * filterSize * 2);
 
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution(-0.5f, 0.5f);
 
-	for (int i = 0; i < windowSize * windowSize; i++) {
-		for (int v = filterSize - 1; v >= 0; v--) {
-			for (int u = 0; u < filterSize; u++) {
+	for (int v = filterSize - 1; v >= 0; v--) {
+		for (int u = 0; u < filterSize; u++) {
+			for (int i = 0; i < windowSize * windowSize; i++) {
 				float x = (u + 0.5f + distribution(generator)) / filterSize;
 				float y = (v + 0.5f + distribution(generator)) / filterSize;
 				samples.push_back(std::sqrtf(y) * std::cosf(2.0f * std::numbers::pi_v<float> * x));
@@ -315,7 +316,8 @@ Texture Renderer::makeShadowmapNoise(int windowSize, int filterSize) {
 			}
 		}
 	}
-	return Texture::make3D(filterSize * filterSize, windowSize, windowSize, GL_RG32F, samples.data(), GL_RG, GL_FLOAT);
+
+	return ShaderStorageBuffer::make(samples);
 }
 
 Renderer::Renderer(
@@ -336,7 +338,7 @@ Renderer::Renderer(
 	RenderBuffer multisampledDepthTarget,
 	Texture shadowmapTarget,
 	Texture postprocessingTarget,
-	Texture poissonDisks
+	ShaderStorageBuffer poissonDisks
 ) :
 	m_window{ window },
 	m_width{ width },

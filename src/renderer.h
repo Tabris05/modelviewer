@@ -30,7 +30,7 @@ class Renderer {
 		void resizeWindow(int width, int height);
 
 		glm::mat4 calcLightMatrix(glm::mat4 modelMatrix);
-		static Texture makeShadowmapNoise(int windowSize, int filterSize);
+		static ShaderStorageBuffer makeShadowmapNoise(int windowSize, int filterSize);
 
 		Renderer(
 			GLFWwindow* window,
@@ -50,7 +50,7 @@ class Renderer {
 			RenderBuffer multisampledDepthTarget,
 			Texture shadowmapTarget,
 			Texture postprocessingTarget,
-			Texture poissonDisks
+			ShaderStorageBuffer poissonDisks
 		);
 		
 		Model m_model;
@@ -67,7 +67,7 @@ class Renderer {
 		RenderBuffer m_multisampledDepthTarget;
 		Texture m_shadowmapTarget;
 		Texture m_postprocessingTarget;
-		Texture m_poissonDisks;
+		ShaderStorageBuffer m_poissonDisks;
 		GLFWwindow* m_window;
 		int m_width, m_height;
 		double m_curFrame = 0.0, m_lastFrame = 0.0;

@@ -29,10 +29,13 @@ uniform int poissonDiskWindowSize;
 uniform int poissonDiskFilterSize;
 uniform float shadowmapSampleRadius;
 layout(bindless_sampler) uniform sampler2D shadowmapTex;
-layout(bindless_sampler) uniform sampler3D poissonDiskTex;
 
 layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	Material materials[];
+};
+
+layout(std430, binding = 1) readonly buffer PoissonDiskBuffer {
+	vec2 samples[];
 };
 
 out vec3 fCol;
@@ -76,7 +79,9 @@ float inShadow() {
 		for(int j = 0; j < poissonDiskFilterSize; j++) {
 			// filter is 2d data stored in 1d, so offset must be a flattened 2d coordinate
 			offset.x = i * poissonDiskFilterSize + j;
-			vec2 samplePoint = projectedPos.xy + texelFetch(poissonDiskTex, offset, 0).rg * shadowmapSampleRadius;
+			// and then flattened further to be used as index into SSBO
+			uint idx = offset.z + poissonDiskWindowSize * (offset.y + poissonDiskWindowSize * offset.x);
+			vec2 samplePoint = projectedPos.xy + samples[idx] * shadowmapSampleRadius;
 			cur += float(projectedPos.z - bias > texture(shadowmapTex, samplePoint).r);
 		}
 		// if all samples produced the same result we assume any subsequent samples will as well and break early
