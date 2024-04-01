@@ -85,7 +85,7 @@ Model Model::make(const std::filesystem::path& path) {
 	
 	// helper function that returns a handle to the ith texture, or loads it if it hasn't been loaded already
 	auto processTexture = [&](size_t index, bool srgb = false) -> GLuint64 {
-		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle();
+		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle().value();
 
 		const fastgltf::Texture& curTexture = asset.textures[index];
 
@@ -118,7 +118,7 @@ Model Model::make(const std::filesystem::path& path) {
 			break;
 		}
 
-		maybeTextures[index] = Texture::make2D(
+		maybeTextures[index] = Texture::make2DBindless(
 			width,
 			height,
 			internalFormat,
@@ -131,9 +131,9 @@ Model Model::make(const std::filesystem::path& path) {
 			static_cast<GLenum>(curSampler.wrapT)
 		);
 
-		maybeTextures[index]->handle();
+		maybeTextures[index]->handle().value();
 		stbi_image_free(bytes);
-		return maybeTextures[index].value().handle();
+		return maybeTextures[index].value().handle().value();
 	};
 
 	// build materials from base values and textures
@@ -153,32 +153,32 @@ Model Model::make(const std::filesystem::path& path) {
 			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex, true);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyAlbedo));
-			val.m_albedoHandle = maybeTextures.back()->handle();
+			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyAlbedo));
+			val.m_albedoHandle = maybeTextures.back()->handle().value();
 		}
 
 		if (curMaterial.pbrData.metallicRoughnessTexture.has_value()) {
 			val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyMetallicRoughness));
-			val.m_albedoHandle = maybeTextures.back()->handle();
+			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyMetallicRoughness));
+			val.m_albedoHandle = maybeTextures.back()->handle().value();
 		}
 
 		if (curMaterial.occlusionTexture.has_value()) {
 			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyMetallicRoughness));
-			val.m_occlusionHandle = maybeTextures.back()->handle();
+			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyMetallicRoughness));
+			val.m_occlusionHandle = maybeTextures.back()->handle().value();
 		}
 
 		if (curMaterial.normalTexture.has_value()) {
 			val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
 		}
 		else {
-			maybeTextures.emplace_back(Texture::make2D(1, 1, GL_RGB8, dummyNormal));
-			val.m_normalHandle = maybeTextures.back()->handle();
+			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyNormal));
+			val.m_normalHandle = maybeTextures.back()->handle().value();
 		}
 
 		materials.emplace_back(val);

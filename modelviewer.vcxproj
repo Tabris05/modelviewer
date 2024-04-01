@@ -205,7 +205,8 @@
     <None Include="shaders\depth.frag" />
     <None Include="shaders\depth.vert" />
     <None Include="shaders\skyboxconversion.frag" />
-    <None Include="shaders\skyboxconversion.vert" />
+    <None Include="shaders\skyboxconvolution.frag" />
+    <None Include="shaders\skyboxpreprocess.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

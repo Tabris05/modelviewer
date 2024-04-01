@@ -30,6 +30,9 @@ uniform int poissonDiskFilterSize;
 uniform float shadowmapSampleRadius;
 layout(bindless_sampler) uniform sampler2D shadowmapTex;
 
+layout(bindless_sampler) uniform samplerCube irradianceTex;
+layout(bindless_sampler) uniform samplerCube envmapTex;
+
 layout(std430, binding = 0) readonly buffer MaterialBuffer {
 	Material materials[];
 };
@@ -117,7 +120,11 @@ vec3 fresnelSchlick(vec3 halfway, vec3 viewDir, vec3 F0) {
 	return F0 + (1.0f - F0) * pow(1.0f - clampedDot(halfway, viewDir), 5.0f);
 }
 
-vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, float roughness) {
+vec3 fresnelSchlickRoughness(vec3 normal, vec3 viewDir, vec3 F0, float roughness) {
+	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(clampedDot(normal, viewDir), 5.0f);
+}
+
+vec3 directionalLight(vec3 viewDir, vec3 normal, vec3 albedo, float metalness, float roughness) {
 	if(lightColor == vec3(0.0f)) return vec3(0.0f);
 	float shadow = inShadow();
 	if(shadow == 0.0f) return vec3(0.0f);
@@ -137,8 +144,11 @@ vec3 directionalLight(vec3 viewDir, vec3 albedo, vec3 normal, float metalness, f
 	return (diffuse + specular) * clampedDot(normal, lightAngle) * lightColor * lightIntensity * shadow;
 }
 
-vec3 ambientLight(vec3 albedo, float occlusion) {
-	return vec3(0.05f) * albedo * occlusion;
+vec3 ambientLight(vec3 viewDir, vec3 normal, vec3 albedo, float metalness, float roughness, float occlusion) {
+	vec3 fresnel = fresnelSchlickRoughness(normal, viewDir, mix(vec3(0.04f), albedo, metalness), roughness);
+	vec3 diffuse = (vec3(1.0f) - fresnel) * (1.0f - metalness) * albedo * texture(irradianceTex, normal).rgb;
+	vec3 specular = vec3(0.0f);
+	return (diffuse + specular) * occlusion;
 }
  
 void main() {
@@ -153,5 +163,5 @@ void main() {
 	float roughness = texture(materials[fMaterialIndex].metallicRoughnessMap, fUV).g * materials[fMaterialIndex].metallicRoughness.g;
 	roughness = isotrophicNDFFilter(normal, roughness);
 	
-	fCol = directionalLight(viewDir, materialColor.rgb, normal, metalness, roughness) + ambientLight(materialColor.rgb, occlusion);
+	fCol = directionalLight(viewDir, normal, materialColor.rgb, metalness, roughness) + ambientLight(viewDir, normal, materialColor.rgb, metalness, roughness, occlusion);
 }

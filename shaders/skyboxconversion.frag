@@ -5,7 +5,6 @@
 
 in vec3 fPos;
 
-uniform float layer;
 layout(bindless_sampler) uniform sampler2D equirectangularMap;
 
 out vec3 fCol;

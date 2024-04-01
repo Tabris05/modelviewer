@@ -83,9 +83,9 @@ Renderer Renderer::make() {
 	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
-	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT24);
+	Texture shadowmapTarget = Texture::make2DBindless(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT24);
 	shadowmapBuffer.attachTexture(shadowmapTarget, GL_DEPTH_ATTACHMENT);
-	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
+	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle().value());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
 	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
@@ -94,9 +94,9 @@ Renderer Renderer::make() {
 	multisampledBuffer.attachRenderBuffer(multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
 
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
-	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
+	Texture postprocessingTarget = Texture::make2DBindless(width, height, GL_RGB16F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle());
+	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle().value());
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
@@ -257,6 +257,8 @@ void Renderer::drawAssetMenu(float horizontalScale, float verticalScale) {
 		if (std::filesystem::exists(skyboxPath) && skyboxPath.extension() == ".hdr") {
 			m_skybox = std::move(Skybox::make(skyboxPath));
 			m_skyboxShader.setUniform("skyboxTex", m_skybox.skyboxTexHandle());
+			m_modelShader.setUniform("irradianceTex", m_skybox.irradianceTexHandle());
+			m_modelShader.setUniform("envmapTex", m_skybox.envmapTexHandle());
 		}
 	}
 	ImGui::SameLine();
@@ -271,9 +273,9 @@ void Renderer::resizeWindow(int width, int height) {
 	m_width = width;
 	m_height = height;
 	m_camera.updateSize(width, height);
-	m_postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
+	m_postprocessingTarget = Texture::make2DBindless(width, height, GL_RGB16F);
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.handle());
+	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.handle().value());
 	m_multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
 	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
