@@ -9,7 +9,6 @@
 #include <random>
 #include "dbg.h"
 void Renderer::run() {
-
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
 		if (const ImGuiIO& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
@@ -77,15 +76,15 @@ Renderer Renderer::make() {
 
 	Camera camera = Camera::make(window, width, height);
 
-	Shader modelShader = Shader::make("shaders/model.vert", "shaders/model.frag");
-	Shader depthShader = Shader::make("shaders/depth.vert", "shaders/depth.frag");
-	Shader skyboxShader = Shader::make("shaders/cubemap.vert", "shaders/cubemap.frag");
-	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
+	Shader modelShader = Shader::makeGraphics("shaders/model.vert", "shaders/model.frag");
+	Shader depthShader = Shader::makeGraphics("shaders/depth.vert", "shaders/depth.frag");
+	Shader skyboxShader = Shader::makeGraphics("shaders/cubemap.vert", "shaders/cubemap.frag");
+	Shader postprocessingShader = Shader::makeGraphics("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
-	Texture shadowmapTarget = Texture::make2DBindless(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT24);
+	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT24);
 	shadowmapBuffer.attachTexture(shadowmapTarget, GL_DEPTH_ATTACHMENT);
-	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle().value());
+	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
 	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
@@ -94,16 +93,20 @@ Renderer Renderer::make() {
 	multisampledBuffer.attachRenderBuffer(multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
 
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
-	Texture postprocessingTarget = Texture::make2DBindless(width, height, GL_RGB16F);
+	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle().value());
+	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle());
+
+	Texture brdfLUT = Texture::make2D(m_brdfLUTSize, m_brdfLUTSize, GL_RG16F, nullptr, GL_RG, GL_FLOAT, GL_LINEAR, GL_LINEAR);
+	modelShader.setUniform("brdfLUTex", brdfLUT.handle());
+
+	Shader brdfIntegral = Shader::makeCompute("shaders/brdfintegral.comp");
+	brdfIntegral.bind();
+	glBindImageTexture(0, brdfLUT.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG16F);
+	glDispatchCompute(m_brdfLUTSize, m_brdfLUTSize, 1);
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
-
-	modelShader.setUniform("poissonDiskWindowSize", m_poissonDiskWindowSize);
-	modelShader.setUniform("poissonDiskFilterSize", m_poissonDiskFilterSize);
-	modelShader.setUniform("shadowmapSampleRadius", m_shadowmapSampleRadius * (1.0f / m_shadowmapResolution));
 
 	return Renderer{ 
 		window,
@@ -121,6 +124,7 @@ Renderer Renderer::make() {
 		std::move(postprocessingBuffer),
 		std::move(multisampledColorTarget),
 		std::move(multisampledDepthTarget),
+		std::move(brdfLUT),
 		std::move(shadowmapTarget),
 		std::move(postprocessingTarget),
 		std::move(poissonDisks)
@@ -134,10 +138,11 @@ Renderer::~Renderer() {
 
 void Renderer::draw() {
 	float horizontalScale = m_width / 1920.0f, verticalScale = m_height / 1080.0f;
-	glm::mat4 camMatrix = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix();
-	glm::mat4 camMatrixNoTranslation = m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * glm::mat4{ glm::mat3{ m_camera.getViewMatrix() } };
-	glm::mat4 modelMatrix = m_model.baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f });
-	glm::mat4 lightMatrix = calcLightMatrix(modelMatrix);
+	glm::mat4 camMatrix{ m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix() };
+	glm::mat4 camMatrixNoTranslation{ m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * glm::mat4{ glm::mat3{ m_camera.getViewMatrix() } } };
+	glm::mat4 modelMatrix{ m_model.baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f }) };
+	glm::mat4 lightMatrix{ calcLightMatrix(modelMatrix) };
+	glm::mat3 normalMatrix{ glm::transpose(glm::inverse(modelMatrix)) };
 
 	// shadow pass
 	glDepthMask(GL_TRUE);
@@ -164,6 +169,7 @@ void Renderer::draw() {
 	m_modelShader.setUniform("camMatrix", camMatrix);
 	m_modelShader.setUniform("modelMatrix", modelMatrix);
 	m_modelShader.setUniform("lightMatrix", lightMatrix);
+	m_modelShader.setUniform("normalMatrix", normalMatrix);
 	m_modelShader.setUniform("camPos", m_camera.getPos());
 	m_modelShader.setUniform("lightAngle", m_lightAngle);
 	m_modelShader.setUniform("lightColor", m_lightColor);
@@ -258,7 +264,8 @@ void Renderer::drawAssetMenu(float horizontalScale, float verticalScale) {
 			m_skybox = std::move(Skybox::make(skyboxPath));
 			m_skyboxShader.setUniform("skyboxTex", m_skybox.skyboxTexHandle());
 			m_modelShader.setUniform("irradianceTex", m_skybox.irradianceTexHandle());
-			m_modelShader.setUniform("envmapTex", m_skybox.envmapTexHandle());
+			m_modelShader.setUniform("envMapTex", m_skybox.envmapTexHandle());
+			m_modelShader.setUniform("maxMip", static_cast<float>(m_skybox.numMipLevels() - 1));
 		}
 	}
 	ImGui::SameLine();
@@ -273,9 +280,9 @@ void Renderer::resizeWindow(int width, int height) {
 	m_width = width;
 	m_height = height;
 	m_camera.updateSize(width, height);
-	m_postprocessingTarget = Texture::make2DBindless(width, height, GL_RGB16F);
+	m_postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.handle().value());
+	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.handle());
 	m_multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
 	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
@@ -338,6 +345,7 @@ Renderer::Renderer(
 	FrameBuffer postprocessingBuffer,
 	RenderBuffer multisampledColorTarget,
 	RenderBuffer multisampledDepthTarget,
+	Texture brdfLUT,
 	Texture shadowmapTarget,
 	Texture postprocessingTarget,
 	ShaderStorageBuffer poissonDisks
@@ -357,6 +365,7 @@ Renderer::Renderer(
 	m_postprocessingBuffer{ std::move(postprocessingBuffer) },
 	m_multisampledColorTarget{ std::move(multisampledColorTarget) },
 	m_multisampledDepthTarget{ std::move(multisampledDepthTarget) },
+	m_brdfLUT{ std::move(brdfLUT) },
 	m_shadowmapTarget{ std::move(shadowmapTarget) },
 	m_postprocessingTarget{ std::move(postprocessingTarget) },
 	m_poissonDisks{ std::move(poissonDisks) } {

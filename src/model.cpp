@@ -85,7 +85,7 @@ Model Model::make(const std::filesystem::path& path) {
 	
 	// helper function that returns a handle to the ith texture, or loads it if it hasn't been loaded already
 	auto processTexture = [&](size_t index, bool srgb = false) -> GLuint64 {
-		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle().value();
+		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle();
 
 		const fastgltf::Texture& curTexture = asset.textures[index];
 
@@ -118,7 +118,7 @@ Model Model::make(const std::filesystem::path& path) {
 			break;
 		}
 
-		maybeTextures[index] = Texture::make2DBindless(
+		maybeTextures[index] = Texture::make2D(
 			width,
 			height,
 			internalFormat,
@@ -131,54 +131,37 @@ Model Model::make(const std::filesystem::path& path) {
 			static_cast<GLenum>(curSampler.wrapT)
 		);
 
-		maybeTextures[index]->handle().value();
+		maybeTextures[index]->handle();
 		stbi_image_free(bytes);
-		return maybeTextures[index].value().handle().value();
+		return maybeTextures[index].value().handle();
 	};
 
-	// build materials from base values and textures
-	// if a material does not specify a texture for a certain component then a 1x1 dummy texture is created
-	// this simplifies shader code by removing the need to check for the presence of textures in a material
 	for (const fastgltf::Material& curMaterial : asset.materials) {
-		unsigned char dummyAlbedo[] { 255, 255, 255, 255 };
-		unsigned char dummyMetallicRoughness[] { 255, 255, 255 };
-		unsigned char dummyNormal[] { 0, 0, 255 };
-
 		Material val{
 			.m_baseColor{ glm::make_vec4(curMaterial.pbrData.baseColorFactor.data()) },
-			.m_metallicRoughness { 0.0f, curMaterial.pbrData.roughnessFactor, curMaterial.pbrData.metallicFactor, 0.0f }
+			.m_textureBitfield{ TextureBitfield::NONE },
+			.m_metalness { curMaterial.pbrData.metallicFactor },
+			.m_roughness { curMaterial.pbrData.roughnessFactor }
 		};
 
 		if (curMaterial.pbrData.baseColorTexture.has_value()) {
 			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex, true);
-		}
-		else {
-			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyAlbedo));
-			val.m_albedoHandle = maybeTextures.back()->handle().value();
-		}
-
-		if (curMaterial.pbrData.metallicRoughnessTexture.has_value()) {
-			val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
-		}
-		else {
-			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyMetallicRoughness));
-			val.m_albedoHandle = maybeTextures.back()->handle().value();
-		}
-
-		if (curMaterial.occlusionTexture.has_value()) {
-			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
-		}
-		else {
-			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyMetallicRoughness));
-			val.m_occlusionHandle = maybeTextures.back()->handle().value();
+			val.m_textureBitfield |= TextureBitfield::HAS_ALBEDO;
 		}
 
 		if (curMaterial.normalTexture.has_value()) {
 			val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
+			val.m_textureBitfield |= TextureBitfield::HAS_NORMAL;
 		}
-		else {
-			maybeTextures.emplace_back(Texture::make2DBindless(1, 1, GL_RGB8, dummyNormal));
-			val.m_normalHandle = maybeTextures.back()->handle().value();
+
+		if (curMaterial.pbrData.metallicRoughnessTexture.has_value()) {
+			val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
+			val.m_textureBitfield |= TextureBitfield::HAS_METALLIC_ROUGHNESS;
+		}
+
+		if (curMaterial.occlusionTexture.has_value()) {
+			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
+			val.m_textureBitfield |= TextureBitfield::HAS_OCCLUSION;
 		}
 
 		materials.emplace_back(val);
@@ -210,7 +193,7 @@ Model Model::make(const std::filesystem::path& path) {
 		}, curNode.transform);
 
 		if (curNode.meshIndex.has_value()) {
-			const glm::mat4 normalTransform = glm::transpose(glm::inverse(transform));
+			const glm::mat3 normalTransform{ glm::transpose(glm::inverse(transform)) };
 			const fastgltf::Mesh& curMesh = asset.meshes[curNode.meshIndex.value()];
 			for (const fastgltf::Primitive& curPrimitive : curMesh.primitives) {
 				size_t oldVerticesSize = vertices.size();
@@ -226,7 +209,7 @@ Model Model::make(const std::filesystem::path& path) {
 
 				const fastgltf::Accessor& normalAccessor = asset.accessors[curPrimitive.findAttribute("NORMAL")->second];
 				fastgltf::iterateAccessorWithIndex<glm::vec3>(asset, normalAccessor, [&vertices, oldVerticesSize, normalTransform](glm::vec3 normal, size_t index) {
-					vertices[index + oldVerticesSize].m_normal = glm::normalize(glm::vec3(normalTransform * glm::vec4(normal, 0.0f)));
+					vertices[index + oldVerticesSize].m_normal = glm::normalize(normalTransform * normal);
 				});
 
 				const fastgltf::Primitive::attribute_type* uvAccessorIndex;

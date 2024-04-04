@@ -15,13 +15,15 @@ class Shader {
 		GLuint id() const;
 
 		void setUniform(const char* uniform, glm::mat4 value);
+		void setUniform(const char* uniform, glm::mat3 value);
 		void setUniform(const char* uniform, glm::vec3 value);
 		void setUniform(const char* uniform, GLuint64 value);
 		void setUniform(const char* uniform, GLuint value);
 		void setUniform(const char* uniform, float value);
 		void setUniform(const char* uniform, int value);
 
-		static Shader make(const char* vsPath, const char* fsPath);
+		static Shader makeGraphics(const char* vsPath, const char* fsPath);
+		static Shader makeCompute(const char* csPath);
 		~Shader();
 
 	private:
@@ -35,6 +37,7 @@ class Shader {
 
 		// shader should never have more than a few uniforms so linear, cache coherent traversal should be fastest
 		std::vector<std::tuple<const char*, GLint, glm::mat4>> m_mat4Cache;
+		std::vector<std::tuple<const char*, GLint, glm::mat3>> m_mat3Cache;
 		std::vector<std::tuple<const char*, GLint, glm::vec3>> m_vec3Cache;
 		std::vector<std::tuple<const char*, GLint, GLuint64>> m_ulongCache;
 		std::vector<std::tuple<const char*, GLint, GLuint>> m_uintCache;

@@ -48,6 +48,7 @@ class Renderer {
 			FrameBuffer postprocessingBuffer,
 			RenderBuffer multisampledColorTarget,
 			RenderBuffer multisampledDepthTarget,
+			Texture brdfLUT,
 			Texture shadowmapTarget,
 			Texture postprocessingTarget,
 			ShaderStorageBuffer poissonDisks
@@ -65,6 +66,7 @@ class Renderer {
 		FrameBuffer m_postprocessingBuffer;
 		RenderBuffer m_multisampledColorTarget;
 		RenderBuffer m_multisampledDepthTarget;
+		Texture m_brdfLUT;
 		Texture m_shadowmapTarget;
 		Texture m_postprocessingTarget;
 		ShaderStorageBuffer m_poissonDisks;
@@ -82,10 +84,12 @@ class Renderer {
 		float m_lightIntensity = 5.0f, m_fov = 90.0f, m_gamma = 2.2f, m_modelScale = 100.0f;
 		bool m_vsyncEnabled = true;
 
+		constexpr static inline int m_brdfLUTSize = 512;
+
+		// if anything is modified here, a modification must also be made to the macro definitions in model.frag
 		constexpr static inline int m_shadowmapResolution = 2048;
 		constexpr static inline int m_poissonDiskWindowSize = 8;
 		constexpr static inline int m_poissonDiskFilterSize = 16;
-		constexpr static inline float m_shadowmapSampleRadius = 4.0f;
 };
 
 #endif

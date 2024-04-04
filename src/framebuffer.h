@@ -11,8 +11,8 @@ class FrameBuffer {
 		void bind();
 		void unbind();
 		GLuint id() const;
-		void attachTexture(const Texture& texture, GLenum attachment);
-		void detachTexture(GLenum attachment);
+		void attachTexture(const Texture& texture, GLenum attachment, int mip = 0);
+		void detachTexture(GLenum attachment, int mip = 0);
 		void attachRenderBuffer(const RenderBuffer& renderBuffer, GLenum attachment);
 		void detachRenderBuffer(GLenum attachment);
 		void blitTo(FrameBuffer& dst, GLenum mask, int x, int y);

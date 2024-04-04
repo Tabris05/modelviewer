@@ -11,9 +11,10 @@ out vec2 fUV;
 
 flat out int fMaterialIndex;
 
-uniform mat4 modelMatrix;
 uniform mat4 camMatrix;
+uniform mat4 modelMatrix;
 uniform mat4 lightMatrix;
+uniform mat3 normalMatrix;
 
 void main() {
 	vec3 wPos = vec3(modelMatrix * vec4(vPos, 1.0f));
@@ -22,6 +23,6 @@ void main() {
 	fPos = wPos;
 	fPosLight = lightMatrix * vec4(wPos, 1.0f);
 	fMaterialIndex = gl_BaseInstance; // using base instance to pass arbitrary data (material index)
-	fNorm = normalize(vec3(modelMatrix * vec4(vNorm, 0.0f)));
+	fNorm = normalize(normalMatrix * vNorm);
 	gl_Position = camMatrix * vec4(wPos, 1.0f);
 }

@@ -18,12 +18,12 @@ GLuint FrameBuffer::id() const {
 	return m_id;
 }
 
-void FrameBuffer::attachTexture(const Texture& texture, GLenum attachment) {
-	glNamedFramebufferTexture(m_id, attachment, texture.id(), 0);
+void FrameBuffer::attachTexture(const Texture& texture, GLenum attachment, int mip) {
+	glNamedFramebufferTexture(m_id, attachment, texture.id(), mip);
 }
 
-void FrameBuffer::detachTexture(GLenum attachment) {
-	glNamedFramebufferTexture(m_id, attachment, 0, 0);
+void FrameBuffer::detachTexture(GLenum attachment, int mip) {
+	glNamedFramebufferTexture(m_id, attachment, 0, mip);
 }
 
 void FrameBuffer::attachRenderBuffer(const RenderBuffer& renderBuffer, GLenum attachment) {
@@ -31,7 +31,7 @@ void FrameBuffer::attachRenderBuffer(const RenderBuffer& renderBuffer, GLenum at
 }
 
 void FrameBuffer::detachRenderBuffer(GLenum attachment) {
-	glNamedFramebufferRenderbuffer(m_id, attachment, 0, 0);
+	glNamedFramebufferRenderbuffer(m_id, attachment, GL_RENDERBUFFER, 0);
 }
 
 void FrameBuffer::blitTo(FrameBuffer& dst, GLenum mask, int x, int y) {

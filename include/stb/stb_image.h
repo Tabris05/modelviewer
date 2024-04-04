@@ -7131,6 +7131,7 @@ static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
       float f1;
       // Exponent
       //f1 = (float) ldexp(1.0f, input[3] - (int)(128 + 8));
+      // next two lines inserted by me to replace commented out above line, netting about 2x load speed
       f1 = 1 << abs(input[3] - (int)(128 + 8));
       if (input[3] - (int)(128 + 8) < 0) f1 = 1.0f / f1;
       if (req_comp <= 2)

@@ -37,6 +37,21 @@ void Shader::setUniform(const char* uniform, glm::mat4 value) {
 	m_mat4Cache.emplace_back(uniform, location, value);
 }
 
+void Shader::setUniform(const char* uniform, glm::mat3 value) {
+	for (auto& [name, location, oldVal] : m_mat3Cache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniformMatrix3fv(m_id, location, 1, GL_FALSE, glm::value_ptr(value));
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniformMatrix3fv(m_id, location, 1, GL_FALSE, glm::value_ptr(value));
+	m_mat3Cache.emplace_back(uniform, location, value);
+}
+
 void Shader::setUniform(const char* uniform, glm::vec3 value) {
 	for (auto& [name, location, oldVal] : m_vec3Cache) {
 		if (name == uniform) {
@@ -112,7 +127,7 @@ void Shader::setUniform(const char* uniform, int value) {
 	m_intCache.emplace_back(uniform, location, value);
 }
 
-Shader Shader::make(const char* vsPath, const char* fsPath) {
+Shader Shader::makeGraphics(const char* vsPath, const char* fsPath) {
 	validatePath(vsPath);
 	validatePath(fsPath);
 
@@ -140,6 +155,27 @@ Shader Shader::make(const char* vsPath, const char* fsPath) {
 
 	glDeleteShader(vsID);
 	glDeleteShader(fsID);
+
+	return Shader{ id };
+}
+
+Shader Shader::makeCompute(const char* csPath) {
+	validatePath(csPath);
+
+	std::string csSource = getShaderSource(csPath);
+	const char* csSource_cstr = csSource.c_str();
+
+	GLuint csID = glCreateShader(GL_COMPUTE_SHADER);
+	glShaderSource(csID, 1, &csSource_cstr, NULL);
+	glCompileShader(csID);
+
+	checkCompile(csID);
+
+	GLuint id = glCreateProgram();
+	glAttachShader(id, csID);
+	glLinkProgram(id);
+
+	glDeleteShader(csID);
 
 	return Shader{ id };
 }
