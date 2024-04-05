@@ -15,17 +15,20 @@
 #define HAS_NORMAL 0x02u
 #define HAS_METALLIC_ROUGHNESS 0x04u
 #define HAS_OCCLUSION 0x08u
+#define HAS_EMISSIVE 0x10u
 
 struct Material {
 	vec4 baseColor;
+	vec4 emissiveColor;
 	sampler2D albedoMap;
 	sampler2D normalMap;
 	sampler2D occlusionMap;
 	sampler2D metallicRoughnessMap;
-	uint textureBitfield;
+	sampler2D emissiveMap;
 	float metalness;
 	float roughness;
-	uint _padding;
+	uint textureBitfield;
+	uint _padding[3];
 };
 
 in vec4 fPosLight;
@@ -179,12 +182,14 @@ void main() {
 	Material mat = materials[fMaterialIndex];
 	
 	vec4 materialColor = mat.baseColor;
+	vec3 emissiveColor = mat.emissiveColor.xyz * mat.emissiveColor.w;
 	vec3 normal = normalize(fNorm);
 	float occlusion = 1.0f;
 	float metalness = mat.metalness;
 	float roughness = mat.roughness;
 
 	if(bitmaskGet(mat.textureBitfield, HAS_ALBEDO)) materialColor *= texture(mat.albedoMap, fUV);
+	if(bitmaskGet(mat.textureBitfield, HAS_EMISSIVE)) emissiveColor *= texture(mat.emissiveMap, fUV).rgb;
 	if(bitmaskGet(mat.textureBitfield, HAS_OCCLUSION)) occlusion *= texture(mat.occlusionMap, fUV).r;
 	if(bitmaskGet(mat.textureBitfield, HAS_NORMAL)) normal = normalize(makeTBN(normal, -viewDir, fUV) * (texture(mat.normalMap, fUV).rgb * 2.0f - 1.0f));
 	if(bitmaskGet(mat.textureBitfield, HAS_METALLIC_ROUGHNESS)) {
@@ -194,5 +199,7 @@ void main() {
 
 	roughness = isotrophicNDFFilter(normal, roughness);
 	
-	fCol = directionalLight(viewDir, normal, materialColor.rgb, metalness, roughness) + ambientLight(viewDir, normal, materialColor.rgb, metalness, roughness, occlusion);
+	fCol = directionalLight(viewDir, normal, materialColor.rgb, metalness, roughness)
+		 + ambientLight(viewDir, normal, materialColor.rgb, metalness, roughness, occlusion)
+		 + emissiveColor;
 }

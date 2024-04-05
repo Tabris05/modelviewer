@@ -175,12 +175,12 @@ void Renderer::draw() {
 	m_modelShader.setUniform("lightColor", m_lightColor);
 	m_modelShader.setUniform("lightIntensity", m_lightIntensity);
 	m_model.draw();
-
+	
 	// skybox pass
 	m_skyboxShader.bind();
 	m_skyboxShader.setUniform("camMatrix", camMatrixNoTranslation);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
-
+	
 	// post processing pass
 	glDisable(GL_DEPTH_TEST);
 	m_multisampledBuffer.blitTo(m_postprocessingBuffer, GL_COLOR_BUFFER_BIT, m_width, m_height);

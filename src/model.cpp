@@ -137,11 +137,12 @@ Model Model::make(const std::filesystem::path& path) {
 	};
 
 	for (const fastgltf::Material& curMaterial : asset.materials) {
-		Material val{
+		Material val {
 			.m_baseColor{ glm::make_vec4(curMaterial.pbrData.baseColorFactor.data()) },
-			.m_textureBitfield{ TextureBitfield::NONE },
+			.m_emissiveColor{ glm::vec4(glm::make_vec3(curMaterial.emissiveFactor.data()), curMaterial.emissiveStrength.value_or(1.0f)) },
 			.m_metalness { curMaterial.pbrData.metallicFactor },
-			.m_roughness { curMaterial.pbrData.roughnessFactor }
+			.m_roughness { curMaterial.pbrData.roughnessFactor },
+			.m_textureBitfield{ TextureBitfield::NONE }
 		};
 
 		if (curMaterial.pbrData.baseColorTexture.has_value()) {
@@ -163,6 +164,11 @@ Model Model::make(const std::filesystem::path& path) {
 			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
 			val.m_textureBitfield |= TextureBitfield::HAS_OCCLUSION;
 		}
+		
+		if (curMaterial.emissiveTexture.has_value()) {
+			val.m_emissiveHandle = processTexture(curMaterial.emissiveTexture.value().textureIndex, true);
+			val.m_textureBitfield |= TextureBitfield::HAS_EMISSIVE;
+		}
 
 		materials.emplace_back(val);
 	}
@@ -172,7 +178,7 @@ Model Model::make(const std::filesystem::path& path) {
 	for (const std::optional<Texture>& curTexture : maybeTextures) {
 		textures.emplace_back(curTexture.value());
 	}
-
+	print(sizeof(Material));
 	// helper function to load meshes, called recursively to traverse the tree of nodes
 	// mesh vertices are transformed to a common model space before storage to avoid the need to store model matrices per mesh
 	// all vertices and indices are stored in a single shared vertex buffer and index buffer for use with multidrawindirect
