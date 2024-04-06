@@ -33,6 +33,8 @@ struct Material {
 
 in vec4 fPosLight;
 in vec3 fPos;
+in vec3 fTan;
+in vec3 fBitan;
 in vec3 fNorm;
 in vec2 fUV;
 
@@ -69,19 +71,6 @@ float clampedDot(vec3 a, vec3 b) {
 
 bool bitmaskGet(uint mask, uint value) {
 	return bool(mask & value);
-}
-
-mat3 makeTBN(vec3 N, vec3 invViewDir, vec2 uv) {
-	vec3 dvdx = dFdx(invViewDir);
-	vec3 dvdy = dFdy(invViewDir);
-	vec2 dudx = dFdx(uv);
-	vec2 dudy = dFdy(uv);
-	vec3 dvdxPerp = cross(N, dvdx);
-	vec3 dvdyPerp = cross(dvdy, N);
-	vec3 T = dvdyPerp * dudx.x + dvdxPerp * dudy.x;
-	vec3 B = dvdyPerp * dudx.y + dvdxPerp * dudy.y;
-	float invmax = inversesqrt(max(dot(T, T), dot(B, B)));
-	return mat3(T * invmax, B * invmax, N);
 }
 
 float isotrophicNDFFilter(vec3 normal, float roughness) {
@@ -191,7 +180,7 @@ void main() {
 	if(bitmaskGet(mat.textureBitfield, HAS_ALBEDO)) materialColor *= texture(mat.albedoMap, fUV);
 	if(bitmaskGet(mat.textureBitfield, HAS_EMISSIVE)) emissiveColor *= texture(mat.emissiveMap, fUV).rgb;
 	if(bitmaskGet(mat.textureBitfield, HAS_OCCLUSION)) occlusion *= texture(mat.occlusionMap, fUV).r;
-	if(bitmaskGet(mat.textureBitfield, HAS_NORMAL)) normal = normalize(makeTBN(normal, -viewDir, fUV) * (texture(mat.normalMap, fUV).rgb * 2.0f - 1.0f));
+	if(bitmaskGet(mat.textureBitfield, HAS_NORMAL)) normal = normalize(mat3(normalize(fTan), normalize(fBitan), normal) * (texture(mat.normalMap, fUV).rgb * 2.0f - 1.0f));
 	if(bitmaskGet(mat.textureBitfield, HAS_METALLIC_ROUGHNESS)) {
 		metalness *= texture(mat.metallicRoughnessMap, fUV).b;
 		roughness *= texture(mat.metallicRoughnessMap, fUV).g;	

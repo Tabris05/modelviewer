@@ -178,7 +178,7 @@ Model Model::make(const std::filesystem::path& path) {
 	for (const std::optional<Texture>& curTexture : maybeTextures) {
 		textures.emplace_back(curTexture.value());
 	}
-	print(sizeof(Material));
+
 	// helper function to load meshes, called recursively to traverse the tree of nodes
 	// mesh vertices are transformed to a common model space before storage to avoid the need to store model matrices per mesh
 	// all vertices and indices are stored in a single shared vertex buffer and index buffer for use with multidrawindirect
@@ -218,6 +218,16 @@ Model Model::make(const std::filesystem::path& path) {
 					vertices[index + oldVerticesSize].m_normal = glm::normalize(normalTransform * normal);
 				});
 
+				// should probably have fallback to calculate tangents if not provided and normal map is present
+				const fastgltf::Primitive::attribute_type* tangentAccessorIndex;
+				if ((tangentAccessorIndex = curPrimitive.findAttribute("TANGENT")) != curPrimitive.attributes.cend()) {
+					const fastgltf::Accessor& tangentAccessor = asset.accessors[tangentAccessorIndex->second];
+					fastgltf::iterateAccessorWithIndex<glm::vec4>(asset, tangentAccessor, [&vertices, oldVerticesSize, transform](glm::vec4 tangent, size_t index) {
+						vertices[index + oldVerticesSize].m_tangent = glm::normalize(glm::vec3{ transform * glm::vec4{ glm::vec3{ tangent }, 0.0f } });
+						vertices[index + oldVerticesSize].m_tangentSign = tangent.w;
+					});
+				}
+
 				const fastgltf::Primitive::attribute_type* uvAccessorIndex;
 				if ((uvAccessorIndex = curPrimitive.findAttribute("TEXCOORD_0")) != curPrimitive.attributes.cend()) {
 					const fastgltf::Accessor& uvAccessor = asset.accessors[uvAccessorIndex->second];
@@ -253,7 +263,9 @@ Model Model::make(const std::filesystem::path& path) {
 	vArr.linkIndexBuffer(iBuf);
 	vArr.linkAttribute(0, 3, GL_FLOAT, offsetof(Vertex, m_position));
 	vArr.linkAttribute(1, 3, GL_FLOAT, offsetof(Vertex, m_normal));
-	vArr.linkAttribute(2, 2, GL_FLOAT, offsetof(Vertex, m_uv));
+	vArr.linkAttribute(2, 3, GL_FLOAT, offsetof(Vertex, m_tangent));
+	vArr.linkAttribute(3, 2, GL_FLOAT, offsetof(Vertex, m_uv));
+	vArr.linkAttribute(4, 1, GL_FLOAT, offsetof(Vertex, m_tangentSign));
 	vArr.bind();
 	cmdBuf.bind();
 

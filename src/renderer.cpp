@@ -8,6 +8,7 @@
 #include <numbers>
 #include <random>
 #include "dbg.h"
+
 void Renderer::run() {
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
@@ -108,7 +109,7 @@ Renderer Renderer::make() {
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
 
-	return Renderer{ 
+	return Renderer { 
 		window,
 		width,
 		height,
