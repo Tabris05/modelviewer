@@ -90,6 +90,18 @@ Texture Texture::makeCube(
 	return Texture{ id, handle };
 }
 
+Texture& Texture::operator=(const Texture& src) {
+	this->~Texture();
+	new (this) Texture{ src };
+	return *this;
+}
+
+Texture& Texture::operator=(Texture&& src) noexcept {
+	this->~Texture();
+	new (this) Texture{ std::move(src) };
+	return *this;
+}
+
 Texture::~Texture() {
 	if (m_rc.count() == 0) {
 		glMakeTextureHandleNonResidentARB(m_handle);

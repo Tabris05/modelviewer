@@ -34,6 +34,18 @@ VertexArray VertexArray::make() {
 	return VertexArray{ id };
 }
 
+VertexArray& VertexArray::operator=(const VertexArray& src) {
+	this->~VertexArray();
+	new (this) VertexArray{ src };
+	return *this;
+}
+
+VertexArray& VertexArray::operator=(VertexArray&& src) noexcept {
+	this->~VertexArray();
+	new (this) VertexArray{ std::move(src) };
+	return *this;
+}
+
 VertexArray::~VertexArray() {
 	if (m_rc.count() == 0) glDeleteVertexArrays(1, &m_id);
 }

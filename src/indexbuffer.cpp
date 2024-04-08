@@ -25,6 +25,18 @@ IndexBuffer IndexBuffer::make(const std::vector<GLuint>& indices) {
 	return IndexBuffer{ id };
 }
 
+IndexBuffer& IndexBuffer::operator=(const IndexBuffer& src) {
+	this->~IndexBuffer();
+	new (this) IndexBuffer{ src };
+	return *this;
+}
+
+IndexBuffer& IndexBuffer::operator=(IndexBuffer&& src) noexcept {
+	this->~IndexBuffer();
+	new (this) IndexBuffer{ std::move(src) };
+	return *this;
+}
+
 IndexBuffer::~IndexBuffer() {
 	if (m_rc.count() == 0) glDeleteBuffers(1, &m_id);
 }

@@ -3,8 +3,8 @@
 
 #include <glad/glad.h>
 #include "refcounter.h"
-#include "texture.h"
 #include "renderbuffer.h"
+#include "texture.h"
 
 class FrameBuffer {
 	public:
@@ -18,6 +18,10 @@ class FrameBuffer {
 		void blitTo(FrameBuffer& dst, GLenum mask, int x, int y);
 	
 		static FrameBuffer make();
+		FrameBuffer(const FrameBuffer& src) = default;
+		FrameBuffer(FrameBuffer&& src) = default;
+		FrameBuffer& operator=(const FrameBuffer& src);
+		FrameBuffer& operator=(FrameBuffer&& src) noexcept;
 		~FrameBuffer();
 	
 	private:

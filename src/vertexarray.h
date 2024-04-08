@@ -15,6 +15,10 @@ class VertexArray {
 		void linkAttribute(GLuint location, GLuint numComponents, GLenum type, GLuint offset);
 
 		static VertexArray make();
+		VertexArray(const VertexArray& src) = default;
+		VertexArray(VertexArray&& src) = default;
+		VertexArray& operator=(const VertexArray& src);
+		VertexArray& operator=(VertexArray&& src) noexcept;
 		~VertexArray();
 
 	private:

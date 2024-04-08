@@ -153,6 +153,8 @@ Shader Shader::makeGraphics(const char* vsPath, const char* fsPath) {
 	glAttachShader(id, fsID);
 	glLinkProgram(id);
 
+	glDetachShader(id, vsID);
+	glDetachShader(id, fsID);
 	glDeleteShader(vsID);
 	glDeleteShader(fsID);
 
@@ -175,9 +177,22 @@ Shader Shader::makeCompute(const char* csPath) {
 	glAttachShader(id, csID);
 	glLinkProgram(id);
 
+	glDetachShader(id, csID);
 	glDeleteShader(csID);
 
 	return Shader{ id };
+}
+
+Shader& Shader::operator=(const Shader& src) {
+	this->~Shader();
+	new (this) Shader{ src };
+	return *this;
+}
+
+Shader& Shader::operator=(Shader&& src) noexcept {
+	this->~Shader();
+	new (this) Shader{ std::move(src) };
+	return *this;
 }
 
 Shader::~Shader() {

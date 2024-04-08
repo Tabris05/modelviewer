@@ -13,6 +13,10 @@ class VertexBuffer {
 		GLuint id() const;
 
 		static VertexBuffer make(const std::vector<Vertex>& vertices = std::vector<Vertex>{});
+		VertexBuffer(const VertexBuffer& src) = default;
+		VertexBuffer(VertexBuffer&& src) = default;
+		VertexBuffer& operator=(const VertexBuffer& src);
+		VertexBuffer& operator=(VertexBuffer&& src) noexcept;
 		~VertexBuffer();
 
 	private:

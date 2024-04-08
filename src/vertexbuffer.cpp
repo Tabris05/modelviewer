@@ -25,6 +25,18 @@ VertexBuffer VertexBuffer::make(const std::vector<Vertex>& vertices) {
 	return VertexBuffer{ id };
 }
 
+VertexBuffer& VertexBuffer::operator=(const VertexBuffer& src) {
+	this->~VertexBuffer();
+	new (this) VertexBuffer{ src };
+	return *this;
+}
+
+VertexBuffer& VertexBuffer::operator=(VertexBuffer&& src) noexcept {
+	this->~VertexBuffer();
+	new (this) VertexBuffer{ std::move(src) };
+	return *this;
+}
+
 VertexBuffer::~VertexBuffer() {
 	if (m_rc.count() == 0) glDeleteBuffers(1, &m_id);
 }

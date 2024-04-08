@@ -14,6 +14,18 @@ ShaderStorageBuffer ShaderStorageBuffer::make() {
 	return ShaderStorageBuffer{ id };
 }
 
+ShaderStorageBuffer& ShaderStorageBuffer::operator=(const ShaderStorageBuffer& src) {
+	this->~ShaderStorageBuffer();
+	new (this) ShaderStorageBuffer{ src };
+	return *this;
+}
+
+ShaderStorageBuffer& ShaderStorageBuffer::operator=(ShaderStorageBuffer&& src) noexcept {
+	this->~ShaderStorageBuffer();
+	new (this) ShaderStorageBuffer{ std::move(src) };
+	return *this;
+}
+
 ShaderStorageBuffer::~ShaderStorageBuffer() {
 	if (m_rc.count() == 0) glDeleteBuffers(1, &m_id);
 }

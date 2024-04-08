@@ -1,4 +1,6 @@
 #include "framebuffer.h"
+#include <new>
+#include <utility>
 
 void FrameBuffer::bind() {
 	if (m_boundID != m_id) {
@@ -42,6 +44,18 @@ FrameBuffer FrameBuffer::make() {
 	GLuint id;
 	glCreateFramebuffers(1, &id);
 	return FrameBuffer{ id };
+}
+
+FrameBuffer& FrameBuffer::operator=(const FrameBuffer& src) {
+	this->~FrameBuffer();
+	new (this) FrameBuffer{ src };
+	return *this;
+}
+
+FrameBuffer& FrameBuffer::operator=(FrameBuffer&& src) noexcept {
+	this->~FrameBuffer();
+	new (this) FrameBuffer{ std::move(src) };
+	return *this;
 }
 
 FrameBuffer::~FrameBuffer() {

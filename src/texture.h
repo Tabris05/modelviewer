@@ -35,7 +35,10 @@ class Texture {
 			GLenum wrapT = GL_CLAMP_TO_EDGE,
 			GLenum wrapR = GL_CLAMP_TO_EDGE
 		);
-
+		Texture(const Texture& src) = default;
+		Texture(Texture&& src) = default;
+		Texture& operator=(const Texture& src);
+		Texture& operator=(Texture&& src) noexcept;
 		~Texture();
 	private:
 		Texture(GLuint id, GLuint64 handle);

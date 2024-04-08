@@ -19,8 +19,11 @@ public:
 		return ShaderStorageBuffer{ id };
 	}
 	static ShaderStorageBuffer make();
+	ShaderStorageBuffer(const ShaderStorageBuffer& src) = default;
+	ShaderStorageBuffer(ShaderStorageBuffer&& src) = default;
+	ShaderStorageBuffer& operator=(const ShaderStorageBuffer& src);
+	ShaderStorageBuffer& operator=(ShaderStorageBuffer&& src) noexcept;
 	~ShaderStorageBuffer();
-	void test(const std::vector<int>& bufferData = std::vector<int>{}) {};
 private:
 	ShaderStorageBuffer(GLuint id);
 

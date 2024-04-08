@@ -14,6 +14,10 @@ public:
 	size_t numCommands() const;
 
 	static CommandBuffer make(const std::vector<DrawCommand>& cmds = std::vector<DrawCommand>{});
+	CommandBuffer(const CommandBuffer& src) = default;
+	CommandBuffer(CommandBuffer&& src) = default;
+	CommandBuffer& operator=(const CommandBuffer& src);
+	CommandBuffer& operator=(CommandBuffer&& src) noexcept;
 	~CommandBuffer();
 
 private:

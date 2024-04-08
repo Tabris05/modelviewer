@@ -24,6 +24,10 @@ class Shader {
 
 		static Shader makeGraphics(const char* vsPath, const char* fsPath);
 		static Shader makeCompute(const char* csPath);
+		Shader(const Shader& src) = default;
+		Shader(Shader&& src) = default;
+		Shader& operator=(const Shader& src);
+		Shader& operator=(Shader&& src) noexcept;
 		~Shader();
 
 	private:

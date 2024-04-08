@@ -29,6 +29,18 @@ CommandBuffer CommandBuffer::make(const std::vector<DrawCommand>& cmds) {
 	return CommandBuffer{ id, cmds.size()};
 }
 
+CommandBuffer& CommandBuffer::operator=(const CommandBuffer& src) {
+	this->~CommandBuffer();
+	new (this) CommandBuffer{ src };
+	return *this;
+}
+
+CommandBuffer& CommandBuffer::operator=(CommandBuffer&& src) noexcept {
+	this->~CommandBuffer();
+	new (this) CommandBuffer{ std::move(src) };
+	return *this;
+}
+
 CommandBuffer::~CommandBuffer() {
 	if (m_rc.count() == 0) glDeleteBuffers(1, &m_id);
 }

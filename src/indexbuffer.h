@@ -12,6 +12,10 @@ public:
 	GLuint id() const;
 
 	static IndexBuffer make(const std::vector<GLuint>& indices = std::vector<GLuint>{});
+	IndexBuffer(const IndexBuffer& src) = default;
+	IndexBuffer(IndexBuffer&& src) = default;
+	IndexBuffer& operator=(const IndexBuffer& src);
+	IndexBuffer& operator=(IndexBuffer&& src) noexcept;
 	~IndexBuffer();
 private:
 	IndexBuffer(GLuint id);
