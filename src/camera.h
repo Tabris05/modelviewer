@@ -1,12 +1,13 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
 class Camera {
 	public:
-		glm::mat4 getProjMatrix(float fovDeg, float nearPlane, float farPlane) const;
+		glm::mat4 getProjMatrix(float fovDeg, float nearPlane) const;
 		glm::mat4 getViewMatrix() const;
 		glm::vec3 getPos() const;
 		void handleInput(float deltaTime);

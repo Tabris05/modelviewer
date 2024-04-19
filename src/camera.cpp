@@ -4,8 +4,14 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
 
-glm::mat4 Camera::getProjMatrix(float fovDeg, float nearPlane, float farPlane) const {
-	return glm::perspective(glm::radians(fovDeg), (float)m_width / (float)m_height, nearPlane, farPlane);
+glm::mat4 Camera::getProjMatrix(float fovDeg, float nearPlane) const {
+	// near and far plane values are irrelevent since they will be overwritten in next lines
+	glm::mat4 result = glm::perspective(glm::radians(fovDeg), (float)m_width / (float)m_height, 1.0f, 1.0f);
+
+	// reverse z with infinite far plane
+	result[2][2] = 0;
+	result[3][2] = nearPlane;
+	return result;
 }
 
 glm::mat4 Camera::getViewMatrix() const {

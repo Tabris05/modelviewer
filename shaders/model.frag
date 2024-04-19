@@ -88,18 +88,24 @@ float isotrophicNDFFilter(vec3 normal, float roughness) {
 float inShadow() {
 	float result = 0.0f;
 	float bias = mix(0.01f, 0.0f, dot(fNorm, lightAngle));
-	vec3 projectedPos = fPosLight.xyz / fPosLight.w * 0.5f + 0.5f;
+	vec3 projectedPos = fPosLight.xyz / fPosLight.w;
+	projectedPos.xy = projectedPos.xy * 0.5f + 0.5f;
 	ivec3 offset = ivec3(0, ivec2(mod(gl_FragCoord.xy, ivec2(WINDOWSIZE))));
 	for(int i = 0; i < FILTERSIZE; i++) {
 		float cur = 0.0f;
 		for(int j = 0; j < FILTERSIZE; j++) {
+
 			// filter is 2d data stored in 1d, so offset must be a flattened 2d coordinate
 			offset.x = i * FILTERSIZE + j;
+
 			// and then flattened further to be used as index into SSBO
 			uint idx = offset.z + WINDOWSIZE * (offset.y + WINDOWSIZE * offset.x);
 			vec2 samplePoint = projectedPos.xy + samples[idx] * SAMPLERADIUS;
-			cur += float(projectedPos.z - bias > texture(shadowmapTex, samplePoint).r);
+
+			// reverse z
+			cur += float(projectedPos.z + bias < texture(shadowmapTex, samplePoint).r);
 		}
+
 		// if all samples produced the same result we assume any subsequent samples will as well and break early
 		if(cur == 0.0f || cur == 1.0f) {
 			result += cur * (FILTERSIZE - i - 1);

@@ -2,6 +2,7 @@
 #define RENDERER_H
 
 #define GLM_ENABLE_EXPERIMENTAL 1
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
 #include <glm/gtx/quaternion.hpp>
 #include <glm/glm.hpp>
 #include <glad/glad.h>

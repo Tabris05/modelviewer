@@ -58,13 +58,15 @@ Renderer Renderer::make() {
 	installDbgCallback();
 #endif
 
+	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_CULL_FACE);
 
-	glPolygonOffset(10.0f, 1.0f);
-	glDepthFunc(GL_LEQUAL);
+	glDepthFunc(GL_GEQUAL); // reverse z
+	glClearDepth(0.0f);
+	glPolygonOffset(-10.0f, -1.0f);
 	glCullFace(GL_BACK);
 
 	ImGui::CreateContext();
@@ -83,13 +85,13 @@ Renderer Renderer::make() {
 	Shader postprocessingShader = Shader::makeGraphics("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
-	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT24);
+	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT32);
 	shadowmapBuffer.attachTexture(shadowmapTarget, GL_DEPTH_ATTACHMENT);
 	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
 	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
-	RenderBuffer multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
+	RenderBuffer multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT32);
 	multisampledBuffer.attachRenderBuffer(multisampledColorTarget, GL_COLOR_ATTACHMENT0);
 	multisampledBuffer.attachRenderBuffer(multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
 
@@ -139,8 +141,8 @@ Renderer::~Renderer() {
 
 void Renderer::draw() {
 	float horizontalScale = m_width / 1920.0f, verticalScale = m_height / 1080.0f;
-	glm::mat4 camMatrix{ m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * m_camera.getViewMatrix() };
-	glm::mat4 camMatrixNoTranslation{ m_camera.getProjMatrix(m_fov / 2.0f, 0.1f, 100.0f) * glm::mat4{ glm::mat3{ m_camera.getViewMatrix() } } };
+	glm::mat4 camMatrix{ m_camera.getProjMatrix(m_fov / 2.0f, 0.1f) * m_camera.getViewMatrix() };
+	glm::mat4 camMatrixNoTranslation{ m_camera.getProjMatrix(m_fov / 2.0f, 0.1f) * glm::mat4{ glm::mat3{ m_camera.getViewMatrix() } } };
 	glm::mat4 modelMatrix{ m_model.baseTransform() * glm::toMat4(m_modelRotation) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ m_modelScale / 100.0f }) };
 	glm::mat4 lightMatrix{ calcLightMatrix(modelMatrix) };
 	glm::mat3 normalMatrix{ glm::transpose(glm::inverse(modelMatrix)) };
@@ -306,7 +308,8 @@ glm::mat4 Renderer::calcLightMatrix(glm::mat4 modelMatrix) {
 	// not as conservative as I would like but I'm not good enough at math to find the actual correct formula
 	glm::vec3 maxBounds{ glm::max(glm::abs(worldSpaceAABB.m_min), glm::abs(worldSpaceAABB.m_max)) };
 	float maxElem = std::max(maxBounds.x, std::max(maxBounds.y, maxBounds.z));
-	return glm::ortho(-maxElem, maxElem, -maxElem, maxElem, -maxElem, maxElem) * glm::lookAt(glm::vec3{ 0.0f, 0.0f, 0.0f }, -m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
+	// pass in positive for z min and negative for z max for reverse z projection
+	return glm::ortho(-maxElem, maxElem, -maxElem, maxElem, maxElem, -maxElem) * glm::lookAt(glm::vec3{ 0.0f, 0.0f, 0.0f }, -m_lightAngle, glm::vec3{ 0.0f, 1.0f, 0.0f });
 }
 
 ShaderStorageBuffer Renderer::makeShadowmapNoise(int windowSize, int filterSize) {

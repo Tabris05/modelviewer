@@ -29,5 +29,7 @@ void main() {
     vec3 xyz = -(n + mirror * ( 1 - 2 * (idx & 1)) * u + mirror * (1 - 2 * (idx >> 1)) * v);
 
     fPos = xyz;
-	gl_Position = (camMatrix * vec4(xyz, 1.0f)).xyww;
+    vec4 transformedPos = camMatrix * vec4(xyz, 1.0f);
+    transformedPos.z = 0.0f; // reverse z
+	gl_Position = transformedPos;
 }
