@@ -39,7 +39,7 @@ float geometrySmith(vec3 normal, vec3 viewDir, vec3 lightDir, float roughness) {
 	return ggx1 * ggx2;
 }
 
-layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 8, local_size_y = 8) in;
 void main() {
 	vec2 uv = (vec2(gl_GlobalInvocationID.xy) + vec2(0.5f)) / imageSize(brdfLUTex);
 	const uint sampleCount = 1024u;

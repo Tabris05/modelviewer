@@ -67,6 +67,22 @@ void Shader::setUniform(const char* uniform, glm::vec3 value) {
 	m_vec3Cache.emplace_back(uniform, location, value);
 }
 
+void Shader::setUniform(const char* uniform, glm::vec2 value) {
+	for (auto& [name, location, oldVal] : m_vec2Cache) {
+		if (name == uniform) {
+			if (value != oldVal) {
+				glProgramUniform2fv(m_id, location, 1, glm::value_ptr(value));
+				oldVal = value;
+			}
+			return;
+		}
+	}
+	GLint location = glGetUniformLocation(m_id, uniform);
+	glProgramUniform2fv(m_id, location, 1, glm::value_ptr(value));
+	m_vec2Cache.emplace_back(uniform, location, value);
+}
+
+
 void Shader::setUniform(const char* uniform, GLuint64 value) {
 	for (auto& [name, location, oldVal] : m_ulongCache) {
 		if (name == uniform) {
@@ -153,6 +169,8 @@ Shader Shader::makeGraphics(const char* vsPath, const char* fsPath) {
 	glAttachShader(id, fsID);
 	glLinkProgram(id);
 
+	checkLink(id);
+
 	glDetachShader(id, vsID);
 	glDetachShader(id, fsID);
 	glDeleteShader(vsID);
@@ -176,6 +194,8 @@ Shader Shader::makeCompute(const char* csPath) {
 	GLuint id = glCreateProgram();
 	glAttachShader(id, csID);
 	glLinkProgram(id);
+
+	checkLink(id);
 
 	glDetachShader(id, csID);
 	glDeleteShader(csID);

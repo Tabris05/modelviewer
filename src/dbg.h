@@ -5,6 +5,7 @@
 	#define print(x)
 	#define checkErr()
 	#define checkCompile(x)
+	#define checkLink(x)
 	#define validatePath(x)
 #else
 	#include <iostream>
@@ -21,6 +22,18 @@
 			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);\
 			GLchar* buf = new GLchar[logSize];\
 			glGetShaderInfoLog(shader, logSize, &logSize, buf);\
+			std::cout << buf << std::endl;\
+			delete[] buf;\
+		}\
+	}
+#define checkLink(shader) {\
+		GLint success = 0;\
+		glGetProgramiv(shader, GL_LINK_STATUS, &success);\
+		if (success == GL_FALSE) {\
+			GLint logSize = 0;\
+			glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &logSize);\
+			GLchar* buf = new GLchar[logSize];\
+			glGetProgramInfoLog(shader, logSize, &logSize, buf);\
 			std::cout << buf << std::endl;\
 			delete[] buf;\
 		}\

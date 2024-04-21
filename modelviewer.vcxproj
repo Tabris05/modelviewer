@@ -202,13 +202,15 @@
     <None Include="shaders\model.frag" />
     <None Include="shaders\model.vert" />
     <None Include="shaders\postprocessing.frag" />
-    <None Include="shaders\postprocessing.vert" />
+    <None Include="shaders\screenquad.vert" />
     <None Include="shaders\depth.frag" />
     <None Include="shaders\depth.vert" />
     <None Include="shaders\skyboxconversion.frag" />
     <None Include="shaders\skyboxconvolution.frag" />
     <None Include="shaders\skyboxprefilter.frag" />
     <None Include="shaders\skyboxpreprocess.vert" />
+    <None Include="shaders\ssao.frag" />
+    <None Include="shaders\ssaoblur.comp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -17,6 +17,7 @@ class Shader {
 		void setUniform(const char* uniform, glm::mat4 value);
 		void setUniform(const char* uniform, glm::mat3 value);
 		void setUniform(const char* uniform, glm::vec3 value);
+		void setUniform(const char* uniform, glm::vec2 value);
 		void setUniform(const char* uniform, GLuint64 value);
 		void setUniform(const char* uniform, GLuint value);
 		void setUniform(const char* uniform, float value);
@@ -43,6 +44,7 @@ class Shader {
 		std::vector<std::tuple<const char*, GLint, glm::mat4>> m_mat4Cache;
 		std::vector<std::tuple<const char*, GLint, glm::mat3>> m_mat3Cache;
 		std::vector<std::tuple<const char*, GLint, glm::vec3>> m_vec3Cache;
+		std::vector<std::tuple<const char*, GLint, glm::vec2>> m_vec2Cache;
 		std::vector<std::tuple<const char*, GLint, GLuint64>> m_ulongCache;
 		std::vector<std::tuple<const char*, GLint, GLuint>> m_uintCache;
 		std::vector<std::tuple<const char*, GLint, float>> m_floatCache;

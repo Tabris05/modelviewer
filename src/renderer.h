@@ -23,56 +23,34 @@ class Renderer {
 		~Renderer();
 
 	private:
-		void draw();
-		void drawLightMenu(float horizontalScale, float verticalScale);
-		void drawModelMenu(float horizontalScale, float verticalScale);
-		void drawOptionsMenu(float horizontalScale, float verticalScale);
-		void drawAssetMenu(float horizontalScale, float verticalScale);
-		void resizeWindow(int width, int height);
+		struct ConstructorData {
+			GLFWwindow* window;
+			int width, height;
+			Model model;
+			Skybox skybox;
+			Camera camera;
+			Shader ssaoShader;
+			Shader ssaoBlurShader;
+			Shader modelShader;
+			Shader depthShader;
+			Shader skyboxShader;
+			Shader postprocessingShader;
+			FrameBuffer shadowmapBuffer;
+			FrameBuffer ssaoBuffer;
+			FrameBuffer multisampledBuffer;
+			FrameBuffer resolvedBuffer;
+			RenderBuffer multisampledColorTarget;
+			RenderBuffer multisampledDepthTarget;
+			Texture brdfLUT;
+			Texture ssaoNoise;
+			Texture shadowmapTarget;
+			Texture ssaoTarget;
+			Texture ssaoBlurTarget;
+			Texture resolvedColorTarget;
+			Texture resolvedDepthTarget;
+			ShaderStorageBuffer poissonDisks;
+		} m;
 
-		glm::mat4 calcLightMatrix(glm::mat4 modelMatrix);
-		static ShaderStorageBuffer makeShadowmapNoise(int windowSize, int filterSize);
-
-		Renderer(
-			GLFWwindow* window,
-			int width,
-			int height,
-			Model model,
-			Skybox skybox,
-			Camera camera,
-			Shader modelShader,
-			Shader depthShader,
-			Shader skyboxShader,
-			Shader postprocessingShader,
-			FrameBuffer shadowmapBuffer,
-			FrameBuffer multisampledBuffer,
-			FrameBuffer postprocessingBuffer,
-			RenderBuffer multisampledColorTarget,
-			RenderBuffer multisampledDepthTarget,
-			Texture brdfLUT,
-			Texture shadowmapTarget,
-			Texture postprocessingTarget,
-			ShaderStorageBuffer poissonDisks
-		);
-		
-		Model m_model;
-		Skybox m_skybox;
-		Camera m_camera;
-		Shader m_modelShader;
-		Shader m_depthShader;
-		Shader m_skyboxShader;
-		Shader m_postprocessingShader;
-		FrameBuffer m_shadowmapBuffer;
-		FrameBuffer m_multisampledBuffer;
-		FrameBuffer m_postprocessingBuffer;
-		RenderBuffer m_multisampledColorTarget;
-		RenderBuffer m_multisampledDepthTarget;
-		Texture m_brdfLUT;
-		Texture m_shadowmapTarget;
-		Texture m_postprocessingTarget;
-		ShaderStorageBuffer m_poissonDisks;
-		GLFWwindow* m_window;
-		int m_width, m_height;
 		double m_curFrame = 0.0, m_lastFrame = 0.0;
 
 		size_t m_framesThisSecond = 0;
@@ -86,11 +64,30 @@ class Renderer {
 		bool m_vsyncEnabled = true;
 
 		constexpr static inline int m_brdfLUTSize = 512;
+		
 
 		// if anything is modified here, a modification must also be made to the macro definitions in model.frag
 		constexpr static inline int m_shadowmapResolution = 2048;
 		constexpr static inline int m_poissonDiskWindowSize = 8;
 		constexpr static inline int m_poissonDiskFilterSize = 16;
+
+		// if anything is modified here, a modification must also be made to the macro definitions in ssao.frag and ssaoblur.comp
+		constexpr static inline int m_kernelSize = 64;
+		constexpr static inline int m_ssaoNoiseSize = 4;
+
+		void draw();
+		void drawLightMenu(float horizontalScale, float verticalScale);
+		void drawModelMenu(float horizontalScale, float verticalScale);
+		void drawOptionsMenu(float horizontalScale, float verticalScale);
+		void drawAssetMenu(float horizontalScale, float verticalScale);
+		void resizeWindow(int width, int height);
+
+		glm::mat4 calcLightMatrix(glm::mat4 modelMatrix);
+		static ShaderStorageBuffer makeShadowmapNoise(int windowSize, int filterSize);
+		static std::array<glm::vec3, m_kernelSize> makeSSAOKernel();
+		static Texture makeSSAONoise();
+
+		Renderer(ConstructorData data);
 };
 
 #endif

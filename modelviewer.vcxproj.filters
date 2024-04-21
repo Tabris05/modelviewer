@@ -169,7 +169,7 @@
     <None Include="shaders\model.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="shaders\postprocessing.vert">
+    <None Include="shaders\screenquad.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="shaders\postprocessing.frag">
@@ -188,5 +188,7 @@
     <None Include="shaders\skyboxconvolution.frag" />
     <None Include="shaders\skyboxprefilter.frag" />
     <None Include="shaders\brdfintegral.comp" />
+    <None Include="shaders\ssao.frag" />
+    <None Include="shaders\ssaoblur.comp" />
   </ItemGroup>
 </Project>

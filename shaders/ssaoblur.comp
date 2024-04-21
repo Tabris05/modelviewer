@@ -1,0 +1,24 @@
+#version 460 core
+#extension GL_ARB_bindless_texture : require
+
+#define NOISE_SIZE 4
+
+layout(r8, binding = 0) restrict readonly uniform image2D ssaoTex;
+layout(r8, binding = 1) restrict writeonly uniform image2D ssaoBlurTex;
+
+layout (local_size_x = 8, local_size_y = 8) in;
+void main() {
+	ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 size = imageSize(ssaoTex);
+
+	if(uv.x < size.x && uv.y < size.y) {
+		float result = 0.0f;
+		for(int x = -NOISE_SIZE / 2; x < NOISE_SIZE / 2; x++) {
+			for(int y = -NOISE_SIZE / 2; y < NOISE_SIZE / 2; y++) {
+				result += imageLoad(ssaoTex, uv + ivec2(x, y)).r;
+			}
+		}
+		result /= NOISE_SIZE * NOISE_SIZE;
+		imageStore(ssaoBlurTex, ivec2(gl_GlobalInvocationID.xy), vec4(result, 0.0f, 0.0f, 0.0f));
+	}
+}
