@@ -93,10 +93,10 @@ Renderer Renderer::make() {
 	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
 
 	FrameBuffer ssaoBuffer = FrameBuffer::make();
-	Texture ssaoTarget = Texture::make2D(width, height, GL_R8);
+	Texture ssaoTarget = Texture::make2D(width / 2, height / 2, GL_R8);
 	ssaoBuffer.attachTexture(ssaoTarget, GL_COLOR_ATTACHMENT0);
 
-	Texture ssaoBlurTarget = Texture::make2D(width, height, GL_R8, nullptr, GL_RED, GL_UNSIGNED_BYTE, GL_LINEAR, GL_LINEAR);
+	Texture ssaoBlurTarget = Texture::make2D(width / 2, height / 2, GL_R8, nullptr, GL_RED, GL_UNSIGNED_BYTE, GL_LINEAR, GL_LINEAR);
 	modelShader.setUniform("ssaoTex", ssaoBlurTarget.handle());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
@@ -203,7 +203,7 @@ void Renderer::draw() {
 
 
 	// ssao pass
-	glViewport(0, 0, m.width, m.height);
+	glViewport(0, 0, m.width / 2, m.height / 2);
 	m.multisampledBuffer.blitTo(m.resolvedBuffer, GL_DEPTH_BUFFER_BIT, m.width, m.height);
 	m.ssaoBuffer.bind();
 	m.ssaoShader.bind();
@@ -214,11 +214,13 @@ void Renderer::draw() {
 	// ssao blur pass
 	m.multisampledBuffer.bind();
 	m.ssaoBlurShader.bind();
-	glDispatchCompute((m.width + 7) / 8, (m.height + 7) / 8, 1);
+	glDispatchCompute((m.width / 2 + 7) / 8, (m.height / 2 + 7) / 8, 1);
 	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 
 	// color pass
+	glViewport(0, 0, m.width, m.height);
 	glDepthMask(GL_FALSE);
+	glClear(GL_COLOR_BUFFER_BIT);
 	m.modelShader.bind();
 	m.modelShader.setUniform("camMatrix", camMatrix);
 	m.modelShader.setUniform("modelMatrix", modelMatrix);
@@ -291,11 +293,13 @@ void Renderer::drawOptionsMenu(float horizontalScale, float verticalScale) {
 	ImGui::SliderFloat("FOV", &m_fov, 60.0f, 120.0f);
 	ImGui::SliderFloat("Gamma", &m_gamma, 1.0f, 4.4f);
 	ImGui::Checkbox("VSync", &m_vsyncEnabled);
+	static bool ssao = 0;
+	ImGui::SameLine();
+	ImGui::Checkbox("SSAO", & ssao);
+	m.modelShader.setUniform("ssao", (int)ssao);
 	ImGui::NewLine();
 	ImGui::Text("Performance");
 	ImGui::Text("%.0f FPS, %.2fms", m_fpsLastSecond, 1000.0 / m_fpsLastSecond);
-	static bool ssao = false;
-	ImGui::Checkbox("SSAO", &ssao); m.modelShader.setUniform("ssao", int(ssao));
 	ImGui::End();
 }
 
@@ -336,10 +340,10 @@ void Renderer::resizeWindow(int width, int height) {
 	m.camera.updateSize(width, height);
 	m.modelShader.setUniform("viewportSize", glm::vec2(width, height));
 
-	m.ssaoTarget = Texture::make2D(width, height, GL_R8);
+	m.ssaoTarget = Texture::make2D(width / 2, height / 2, GL_R8);
 	m.ssaoBuffer.attachTexture(m.ssaoTarget, GL_COLOR_ATTACHMENT0);
 
-	m.ssaoBlurTarget = Texture::make2D(width, height, GL_R8);
+	m.ssaoBlurTarget = Texture::make2D(width / 2, height / 2, GL_R8);
 	m.modelShader.setUniform("ssaoTex", m.ssaoBlurTarget.handle());
 
 	glBindImageTexture(0, m.ssaoTarget.id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);

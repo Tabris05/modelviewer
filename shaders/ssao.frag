@@ -26,7 +26,7 @@ vec3 derivePos(vec2 uv) {
 }
 
 void main() {
-	vec2 scale = textureSize(inputTex, 0).xy / NOISE_SIZE;
+	vec2 scale = textureSize(inputTex, 0).xy / 2 / NOISE_SIZE;
 	vec3 fragPos = derivePos(fUV);
 	vec3 normal = normalize(-cross(dFdy(fragPos), dFdx(fragPos)));
 	vec3 rotation = texture(noiseTex, fUV * scale).xyz;
@@ -40,7 +40,6 @@ void main() {
 		vec4 samplePosNDC = projMatrix * vec4(samplePos, 1.0f);
 		samplePosNDC.xy /= samplePosNDC.w;
 		samplePosNDC.xy = samplePosNDC.xy * 0.5f + 0.5f;
-
 
 		float sampleDepth = derivePos(samplePosNDC.xy).z;
 		float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));

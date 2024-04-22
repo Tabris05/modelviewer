@@ -173,6 +173,7 @@ vec3 ambientLight(vec3 viewDir, vec3 normal, vec3 albedo, float metalness, float
 	vec2 brdf = texture(brdfLUTex, vec2(clampedDot(normal, viewDir), roughness)).rg;
 	vec3 diffuse = (1.0f - fresnel) * (1.0f - metalness) * albedo * texture(irradianceTex, normal).rgb;
 	vec3 specular = envMap * (fresnel * brdf.x + brdf.y);
+	//return (diffuse + specular) * occlusion * texture(ssaoTex, gl_FragCoord.xy / viewportSize).r;
 	return (diffuse + specular) * occlusion * (ssao == 1 ? texture(ssaoTex, gl_FragCoord.xy / viewportSize).r : 1.0f);
 }
  
@@ -201,6 +202,4 @@ void main() {
 	fCol = directionalLight(viewDir, normal, materialColor.rgb, metalness, roughness)
 		 + ambientLight(viewDir, normal, materialColor.rgb, metalness, roughness, occlusion)
 		 + emissiveColor;
-
-	//fCol = texture(ssaoTex, gl_FragCoord.xy / viewportSize).rgb;
 }
