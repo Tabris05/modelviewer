@@ -1,0 +1,59 @@
+#version 460 core
+#extension GL_ARB_bindless_texture : require
+
+#define KERNEL_SIZE 64
+#define NOISE_SIZE 4
+
+uniform mat4 projMatrix;
+uniform mat4 invProjMatrix;
+uniform vec3 kernel[KERNEL_SIZE];
+layout(bindless_sampler) uniform sampler2D depthTex;
+
+layout(std430, binding = 2) readonly buffer RotationBuffer {
+	vec2 samples[];
+};
+
+layout(r8, binding = 0) restrict writeonly uniform image2D ssaoImg;
+
+const float radius = 0.5f;
+
+vec3 derivePos(vec2 uv) {
+	float depth = textureLod(depthTex, uv, 0).r;
+
+	vec4 ndc = vec4(uv * 2.0f - 1.0f, depth, 1.0f);
+	vec4 viewSpace = invProjMatrix * ndc;
+
+	return viewSpace.xyz / viewSpace.w;
+}
+
+layout (local_size_x = 8, local_size_y = 8) in;
+void main() {
+	ivec2 texel = ivec2(gl_GlobalInvocationID.xy * 2);
+	vec2 viewportSize = vec2(textureSize(depthTex, 0));
+	if(texel.x >= viewportSize.x || texel.y >= viewportSize.y) return;
+
+	vec3 pos = derivePos((texel + vec2(0.5f, 0.5f)) / viewportSize);
+	vec3 posdx = derivePos((texel + vec2(1.5f, 0.5f)) / viewportSize);
+	vec3 posdy = derivePos((texel + vec2(0.5f, 1.5f)) / viewportSize);
+	vec3 normal = normalize(cross(posdx - pos, posdy - pos));
+
+	uvec2 offset = uvec2(mod(gl_GlobalInvocationID.xy, uvec2(NOISE_SIZE)));
+	vec3 rotation = vec3(samples[offset.x * NOISE_SIZE + offset.y], 0.0f);
+	vec3 tangent = normalize(rotation - normal * dot(rotation, normal));
+	vec3 bitangent = cross(normal, tangent);
+	mat3 tbn = mat3(tangent, bitangent, normal);
+
+	float occlusion = 0.0f;
+	for(int i = 0; i < KERNEL_SIZE; i++) {
+		vec3 samplePos = pos + tbn * kernel[i] * radius;
+		vec4 samplePosNDC = projMatrix * vec4(samplePos, 1.0f);
+		samplePosNDC.xy /= samplePosNDC.w;
+		samplePosNDC.xy = samplePosNDC.xy * 0.5f + 0.5f;
+
+		float sampleDepth = derivePos(samplePosNDC.xy).z;
+		float rangeCheck = smoothstep(0.0, 1.0, radius / abs(pos.z - sampleDepth));
+		occlusion += float(sampleDepth >= samplePos.z) * rangeCheck;
+	}
+
+	imageStore(ssaoImg, ivec2(gl_GlobalInvocationID.xy), vec4(1.0f - occlusion / KERNEL_SIZE, 0.0f, 0.0f, 0.0f));
+}

@@ -10,6 +10,15 @@
 #include <random>
 #include "dbg.h"
 
+// SSBOs:
+// 0 - materials
+// 1 - shadow map noise
+// 2 - ssao noise
+
+// Images:
+// 0 - ssao texture
+// 1 - ssao blur texture
+
 void Renderer::run() {
 	while (!glfwWindowShouldClose(m.window)) {
 		glfwPollEvents();
@@ -80,8 +89,8 @@ Renderer Renderer::make() {
 
 	Camera camera = Camera::make(window, width, height);
 
+	Shader ssaoShader = Shader::makeCompute("shaders/ssao.comp");
 	Shader ssaoBlurShader = Shader::makeCompute("shaders/ssaoblur.comp");
-	Shader ssaoShader = Shader::makeGraphics("shaders/screenquad.vert", "shaders/ssao.frag");
 	Shader modelShader = Shader::makeGraphics("shaders/model.vert", "shaders/model.frag");
 	Shader depthShader = Shader::makeGraphics("shaders/depth.vert", "shaders/depth.frag");
 	Shader skyboxShader = Shader::makeGraphics("shaders/cubemap.vert", "shaders/cubemap.frag");
@@ -92,10 +101,7 @@ Renderer Renderer::make() {
 	shadowmapBuffer.attachTexture(shadowmapTarget, GL_DEPTH_ATTACHMENT);
 	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
 
-	FrameBuffer ssaoBuffer = FrameBuffer::make();
 	Texture ssaoTarget = Texture::make2D(width / 2, height / 2, GL_R8);
-	ssaoBuffer.attachTexture(ssaoTarget, GL_COLOR_ATTACHMENT0);
-
 	Texture ssaoBlurTarget = Texture::make2D(width / 2, height / 2, GL_R8, nullptr, GL_RED, GL_UNSIGNED_BYTE, GL_LINEAR, GL_LINEAR);
 	modelShader.setUniform("ssaoTex", ssaoBlurTarget.handle());
 
@@ -111,7 +117,6 @@ Renderer Renderer::make() {
 	resolvedBuffer.attachTexture(resolvedColorTarget, GL_COLOR_ATTACHMENT0);
 	resolvedBuffer.attachTexture(resolvedDepthTarget, GL_DEPTH_ATTACHMENT);
 	postprocessingShader.setUniform("inputTex", resolvedColorTarget.handle());
-	ssaoShader.setUniform("inputTex", resolvedDepthTarget.handle());
 
 	Texture brdfLUT = Texture::make2D(m_brdfLUTSize, m_brdfLUTSize, GL_RG16F, nullptr, GL_RG, GL_FLOAT, GL_LINEAR, GL_LINEAR);
 	modelShader.setUniform("brdfLUTex", brdfLUT.handle());
@@ -122,7 +127,8 @@ Renderer Renderer::make() {
 	glDispatchCompute((m_brdfLUTSize + 7) / 8, (m_brdfLUTSize + 7) / 8, 1);
 	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 
-	glBindImageTexture(0, ssaoTarget.id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+	ssaoShader.setUniform("depthTex", resolvedDepthTarget.handle());
+	glBindImageTexture(0, ssaoTarget.id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8);
 	glBindImageTexture(1, ssaoBlurTarget.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
@@ -131,8 +137,8 @@ Renderer Renderer::make() {
 	std::array<glm::vec3, m_kernelSize> kernel = makeSSAOKernel();
 	glProgramUniform3fv(ssaoShader.id(), glGetUniformLocation(ssaoShader.id(), "kernel"), m_kernelSize, glm::value_ptr(kernel[0]));
 
-	Texture ssaoNoise = makeSSAONoise();
-	ssaoShader.setUniform("noiseTex", ssaoNoise.handle());
+	ShaderStorageBuffer ssaoNoise = makeSSAONoise();
+	ssaoNoise.bind(2);
 
 	modelShader.setUniform("viewportSize", glm::vec2(width, height));
 	modelShader.setUniform("ssao", 0);
@@ -151,19 +157,18 @@ Renderer Renderer::make() {
 		std::move(skyboxShader),
 		std::move(postprocessingShader),
 		std::move(shadowmapBuffer),
-		std::move(ssaoBuffer),
 		std::move(multisampledBuffer),
 		std::move(resolvedBuffer),
 		std::move(multisampledColorTarget),
 		std::move(multisampledDepthTarget),
 		std::move(brdfLUT),
-		std::move(ssaoNoise),
 		std::move(shadowmapTarget),
 		std::move(ssaoTarget),
 		std::move(ssaoBlurTarget),
 		std::move(resolvedColorTarget),
 		std::move(resolvedDepthTarget),
-		std::move(poissonDisks)
+		std::move(poissonDisks),
+		std::move(ssaoNoise)
 	} };
 }
 
@@ -203,16 +208,15 @@ void Renderer::draw() {
 
 
 	// ssao pass
-	glViewport(0, 0, m.width / 2, m.height / 2);
 	m.multisampledBuffer.blitTo(m.resolvedBuffer, GL_DEPTH_BUFFER_BIT, m.width, m.height);
-	m.ssaoBuffer.bind();
+	glTextureBarrier();
 	m.ssaoShader.bind();
 	m.ssaoShader.setUniform("projMatrix", projMatrix);
 	m.ssaoShader.setUniform("invProjMatrix", glm::inverse(projMatrix));
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDispatchCompute((m.width / 2 + 7) / 8, (m.height / 2 + 7) / 8, 1);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 	// ssao blur pass
-	m.multisampledBuffer.bind();
 	m.ssaoBlurShader.bind();
 	glDispatchCompute((m.width / 2 + 7) / 8, (m.height / 2 + 7) / 8, 1);
 	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
@@ -220,6 +224,7 @@ void Renderer::draw() {
 	// color pass
 	glViewport(0, 0, m.width, m.height);
 	glDepthMask(GL_FALSE);
+	m.multisampledBuffer.bind();
 	glClear(GL_COLOR_BUFFER_BIT);
 	m.modelShader.bind();
 	m.modelShader.setUniform("camMatrix", camMatrix);
@@ -341,12 +346,10 @@ void Renderer::resizeWindow(int width, int height) {
 	m.modelShader.setUniform("viewportSize", glm::vec2(width, height));
 
 	m.ssaoTarget = Texture::make2D(width / 2, height / 2, GL_R8);
-	m.ssaoBuffer.attachTexture(m.ssaoTarget, GL_COLOR_ATTACHMENT0);
-
 	m.ssaoBlurTarget = Texture::make2D(width / 2, height / 2, GL_R8);
 	m.modelShader.setUniform("ssaoTex", m.ssaoBlurTarget.handle());
 
-	glBindImageTexture(0, m.ssaoTarget.id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+	glBindImageTexture(0, m.ssaoTarget.id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8);
 	glBindImageTexture(1, m.ssaoBlurTarget.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
 
 	m.multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
@@ -359,7 +362,7 @@ void Renderer::resizeWindow(int width, int height) {
 	m.resolvedBuffer.attachTexture(m.resolvedColorTarget, GL_COLOR_ATTACHMENT0);
 	m.resolvedBuffer.attachTexture(m.resolvedDepthTarget, GL_DEPTH_ATTACHMENT);
 	m.postprocessingShader.setUniform("inputTex", m.resolvedColorTarget.handle());
-	m.ssaoShader.setUniform("inputTex", m.resolvedDepthTarget.handle());
+	m.ssaoShader.setUniform("depthTex", m.resolvedDepthTarget.handle());
 
 	glViewport(0, 0, width, height);
 	draw();
@@ -427,8 +430,8 @@ auto Renderer::makeSSAOKernel() -> std::array<glm::vec3, m_kernelSize>  {
 	return kernel;
 }
 
-Texture Renderer::makeSSAONoise() {
-	std::array<glm::vec2, m_ssaoNoiseSize * m_ssaoNoiseSize> samples;
+ShaderStorageBuffer Renderer::makeSSAONoise() {
+	std::vector<glm::vec2> samples(m_ssaoNoiseSize * m_ssaoNoiseSize);
 
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
@@ -437,7 +440,7 @@ Texture Renderer::makeSSAONoise() {
 		samples[i] = glm::vec2{ distribution(generator),  distribution(generator) };
 	}
 
-	return Texture::make2D(m_ssaoNoiseSize, m_ssaoNoiseSize, GL_RG16F, samples.data(), GL_RG, GL_FLOAT, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	return ShaderStorageBuffer::make(samples);
 }
 
 Renderer::Renderer(ConstructorData data) : m{ std::move(data) } {

@@ -209,6 +209,7 @@
     <None Include="shaders\skyboxconvolution.frag" />
     <None Include="shaders\skyboxprefilter.frag" />
     <None Include="shaders\skyboxpreprocess.vert" />
+    <None Include="shaders\ssao.comp" />
     <None Include="shaders\ssao.frag" />
     <None Include="shaders\ssaoblur.comp" />
   </ItemGroup>

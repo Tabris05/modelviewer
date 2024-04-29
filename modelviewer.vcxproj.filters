@@ -190,5 +190,6 @@
     <None Include="shaders\brdfintegral.comp" />
     <None Include="shaders\ssao.frag" />
     <None Include="shaders\ssaoblur.comp" />
+    <None Include="shaders\ssao.comp" />
   </ItemGroup>
 </Project>

@@ -36,19 +36,18 @@ class Renderer {
 			Shader skyboxShader;
 			Shader postprocessingShader;
 			FrameBuffer shadowmapBuffer;
-			FrameBuffer ssaoBuffer;
 			FrameBuffer multisampledBuffer;
 			FrameBuffer resolvedBuffer;
 			RenderBuffer multisampledColorTarget;
 			RenderBuffer multisampledDepthTarget;
 			Texture brdfLUT;
-			Texture ssaoNoise;
 			Texture shadowmapTarget;
 			Texture ssaoTarget;
 			Texture ssaoBlurTarget;
 			Texture resolvedColorTarget;
 			Texture resolvedDepthTarget;
 			ShaderStorageBuffer poissonDisks;
+			ShaderStorageBuffer ssaoNoise;
 		} m;
 
 		double m_curFrame = 0.0, m_lastFrame = 0.0;
@@ -84,8 +83,9 @@ class Renderer {
 
 		glm::mat4 calcLightMatrix(glm::mat4 modelMatrix);
 		static ShaderStorageBuffer makeShadowmapNoise(int windowSize, int filterSize);
+		static ShaderStorageBuffer makeSSAONoise();
 		static std::array<glm::vec3, m_kernelSize> makeSSAOKernel();
-		static Texture makeSSAONoise();
+		
 
 		Renderer(ConstructorData data);
 };
