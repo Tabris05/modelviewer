@@ -128,6 +128,7 @@ Renderer Renderer::make() {
 	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 
 	ssaoShader.setUniform("depthTex", resolvedDepthTarget.handle());
+	ssaoBlurShader.setUniform("depthTex", resolvedDepthTarget.handle());
 	glBindImageTexture(0, ssaoTarget.id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8);
 	glBindImageTexture(1, ssaoBlurTarget.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
 
@@ -363,6 +364,7 @@ void Renderer::resizeWindow(int width, int height) {
 	m.resolvedBuffer.attachTexture(m.resolvedDepthTarget, GL_DEPTH_ATTACHMENT);
 	m.postprocessingShader.setUniform("inputTex", m.resolvedColorTarget.handle());
 	m.ssaoShader.setUniform("depthTex", m.resolvedDepthTarget.handle());
+	m.ssaoBlurShader.setUniform("depthTex", m.resolvedDepthTarget.handle());
 
 	glViewport(0, 0, width, height);
 	draw();
