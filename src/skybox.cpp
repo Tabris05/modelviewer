@@ -43,7 +43,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
 
 	int width, height, nrChannels;
 	float* data = stbi_loadf(path.string().c_str(), &width, &height, &nrChannels, 0);
-	Texture equirectangular = Texture::make2D(width, height, GL_RGB16F, data, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
+	Texture equirectangular = Texture::make2D(width, height, GL_R11F_G11F_B10F, data, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
 	stbi_image_free(data);
 
     FrameBuffer captureBuffer = FrameBuffer::make();
@@ -51,7 +51,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     
     // render equirectangular map to cubemap faces
     int cubemapSize = height / 2;
-    Texture skyboxTex = Texture::makeCube(cubemapSize, cubemapSize, GL_RGB16F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
+    Texture skyboxTex = Texture::makeCube(cubemapSize, cubemapSize, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
     captureBuffer.attachTexture(skyboxTex, GL_COLOR_ATTACHMENT0);
 
     Shader skyboxConversionShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxconversion.frag");
@@ -72,7 +72,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     glTextureParameteri(skyboxMipMapID, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTextureParameteri(skyboxMipMapID, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTextureParameteri(skyboxMipMapID, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTextureStorage2D(skyboxMipMapID, std::log2(cubemapSize) + 1, GL_RGB16F, cubemapSize, cubemapSize);
+    glTextureStorage2D(skyboxMipMapID, std::log2(cubemapSize) + 1, GL_R11F_G11F_B10F, cubemapSize, cubemapSize);
     glCopyImageSubData(skyboxTex.id(), GL_TEXTURE_CUBE_MAP, 0, 0, 0, 0, skyboxMipMapID, GL_TEXTURE_CUBE_MAP, 0, 0, 0, 0, cubemapSize, cubemapSize, 6);
     glGenerateTextureMipmap(skyboxMipMapID);
     GLuint64 skyboxMipMapHandle = glGetTextureHandleARB(skyboxMipMapID);
@@ -80,7 +80,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
 
     // convolute skybox cubemap to create irradiance map (diffuse ibl)
     static constexpr int irradianceMapSize = 32;
-    Texture irradianceTex = Texture::makeCube(irradianceMapSize, irradianceMapSize, GL_RGB16F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
+    Texture irradianceTex = Texture::makeCube(irradianceMapSize, irradianceMapSize, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
     captureBuffer.attachTexture(irradianceTex, GL_COLOR_ATTACHMENT0);
 
     Shader skyboxConvolutionShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxconvolution.frag");
@@ -97,7 +97,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     // convolute skybox cubemap to create mip chain of environment maps (specular ibl)
     static constexpr int envMapSize = 512;
     const int numMipLevels = std::log2(envMapSize) + 1;
-    Texture envMapTex = Texture::makeCube(envMapSize, envMapSize, GL_RGB16F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+    Texture envMapTex = Texture::makeCube(envMapSize, envMapSize, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
     Shader skyboxPrefilterShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxprefilter.frag");
     skyboxPrefilterShader.setUniform("skyboxTex", skyboxMipMapHandle);

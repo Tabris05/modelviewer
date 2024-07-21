@@ -23,6 +23,8 @@ ComputeShader ComputeShader::make(const char* csPath) {
 	glAttachShader(id, csID);
 	glLinkProgram(id);
 
+	checkLink(id);
+
 	glDetachShader(id, csID);
 	glDeleteShader(csID);
 

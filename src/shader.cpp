@@ -153,6 +153,8 @@ Shader Shader::make(const char* vsPath, const char* fsPath) {
 	glAttachShader(id, fsID);
 	glLinkProgram(id);
 
+	checkLink(id);
+
 	glDetachShader(id, vsID);
 	glDetachShader(id, fsID);
 	glDeleteShader(vsID);

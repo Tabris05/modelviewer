@@ -90,13 +90,13 @@ Renderer Renderer::make() {
 	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
-	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
+	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_R11F_G11F_B10F);
 	RenderBuffer multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT32);
 	multisampledBuffer.attachRenderBuffer(multisampledColorTarget, GL_COLOR_ATTACHMENT0);
 	multisampledBuffer.attachRenderBuffer(multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
 
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
-	Texture postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
+	Texture postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle());
 
@@ -188,6 +188,7 @@ void Renderer::draw() {
 	m_skyboxShader.bind();
 	m_skyboxShader.setUniform("camMatrix", camMatrixNoTranslation);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glTextureBarrier();
 	
 	// post processing pass
 	glDisable(GL_DEPTH_TEST);
@@ -288,10 +289,10 @@ void Renderer::resizeWindow(int width, int height) {
 	m_width = width;
 	m_height = height;
 	m_camera.updateSize(width, height);
-	m_postprocessingTarget = Texture::make2D(width, height, GL_RGB16F);
+	m_postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.handle());
-	m_multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_RGB16F);
+	m_multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_R11F_G11F_B10F);
 	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledDepthTarget, GL_DEPTH_ATTACHMENT);

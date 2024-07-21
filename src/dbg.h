@@ -4,6 +4,7 @@
 #ifdef NDEBUG
 	#define print(x)
 	#define checkErr()
+	#define checkLink(x)
 	#define checkCompile(x)
 	#define validatePath(x)
 #else
@@ -13,6 +14,18 @@
 	#include <glad/glad.h>
     void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length, const char* message, const void* userParam);
 	#define print(x) std::cout << x << '\n'
+	#define checkLink(shader) {\
+		GLint success = 0;\
+		glGetProgramiv(shader, GL_LINK_STATUS, &success);\
+		if (success == GL_FALSE) {\
+			GLint logSize = 0;\
+			glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &logSize);\
+			GLchar* buf = new GLchar[logSize];\
+			glGetProgramInfoLog(shader, logSize, &logSize, buf);\
+			std::cout << buf << std::endl;\
+			delete[] buf;\
+		}\
+	}
 	#define checkCompile(shader) {\
 		GLint success = 0;\
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);\
