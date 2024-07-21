@@ -54,7 +54,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     Texture skyboxTex = Texture::makeCube(cubemapSize, cubemapSize, GL_RGB16F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
     captureBuffer.attachTexture(skyboxTex, GL_COLOR_ATTACHMENT0);
 
-    Shader skyboxConversionShader = Shader::makeGraphics("shaders/skyboxpreprocess.vert", "shaders/skyboxconversion.frag");
+    Shader skyboxConversionShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxconversion.frag");
     skyboxConversionShader.setUniform("equirectangularMap", equirectangular.handle());
 
     skyboxConversionShader.bind();
@@ -83,7 +83,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     Texture irradianceTex = Texture::makeCube(irradianceMapSize, irradianceMapSize, GL_RGB16F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
     captureBuffer.attachTexture(irradianceTex, GL_COLOR_ATTACHMENT0);
 
-    Shader skyboxConvolutionShader = Shader::makeGraphics("shaders/skyboxpreprocess.vert", "shaders/skyboxconvolution.frag");
+    Shader skyboxConvolutionShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxconvolution.frag");
     skyboxConvolutionShader.setUniform("skyboxTex", skyboxMipMapHandle);
 
     skyboxConvolutionShader.bind();
@@ -99,7 +99,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     const int numMipLevels = std::log2(envMapSize) + 1;
     Texture envMapTex = Texture::makeCube(envMapSize, envMapSize, GL_RGB16F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
-    Shader skyboxPrefilterShader = Shader::makeGraphics("shaders/skyboxpreprocess.vert", "shaders/skyboxprefilter.frag");
+    Shader skyboxPrefilterShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxprefilter.frag");
     skyboxPrefilterShader.setUniform("skyboxTex", skyboxMipMapHandle);
     skyboxPrefilterShader.setUniform("resolution", static_cast<float>(cubemapSize));
 

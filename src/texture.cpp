@@ -9,6 +9,10 @@ GLuint64 Texture::handle() const {
 	return m_handle;
 }
 
+void Texture::bindForCompute(GLuint binding, GLenum access) const {
+	glBindImageTexture(binding, m_id, 0, GL_FALSE, 0, access, m_internalFormat);
+}
+
 Texture Texture::make2D(
 		int width,
 		int height,
@@ -44,7 +48,7 @@ Texture Texture::make2D(
 	GLuint64 handle = glGetTextureHandleARB(id);
 	glMakeTextureHandleResidentARB(handle);
 
-	return Texture{ id, handle };
+	return Texture{ id, handle, internalFormat };
 }
 
 Texture Texture::makeCube(
@@ -87,7 +91,7 @@ Texture Texture::makeCube(
 	GLuint64 handle = glGetTextureHandleARB(id);
 	glMakeTextureHandleResidentARB(handle);
 
-	return Texture{ id, handle };
+	return Texture{ id, handle, internalFormat };
 }
 
 Texture& Texture::operator=(const Texture& src) {
@@ -109,4 +113,4 @@ Texture::~Texture() {
 	}
 }
 
-Texture::Texture(GLuint id, GLuint64 handle) : m_id{ id }, m_handle{ handle } {}
+Texture::Texture(GLuint id, GLuint64 handle, GLenum internalFormat) : m_id{ id }, m_handle{ handle }, m_internalFormat{ internalFormat } {}

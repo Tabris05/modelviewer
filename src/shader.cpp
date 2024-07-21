@@ -127,7 +127,7 @@ void Shader::setUniform(const char* uniform, int value) {
 	m_intCache.emplace_back(uniform, location, value);
 }
 
-Shader Shader::makeGraphics(const char* vsPath, const char* fsPath) {
+Shader Shader::make(const char* vsPath, const char* fsPath) {
 	validatePath(vsPath);
 	validatePath(fsPath);
 
@@ -157,28 +157,6 @@ Shader Shader::makeGraphics(const char* vsPath, const char* fsPath) {
 	glDetachShader(id, fsID);
 	glDeleteShader(vsID);
 	glDeleteShader(fsID);
-
-	return Shader{ id };
-}
-
-Shader Shader::makeCompute(const char* csPath) {
-	validatePath(csPath);
-
-	std::string csSource = getShaderSource(csPath);
-	const char* csSource_cstr = csSource.c_str();
-
-	GLuint csID = glCreateShader(GL_COMPUTE_SHADER);
-	glShaderSource(csID, 1, &csSource_cstr, NULL);
-	glCompileShader(csID);
-
-	checkCompile(csID);
-
-	GLuint id = glCreateProgram();
-	glAttachShader(id, csID);
-	glLinkProgram(id);
-
-	glDetachShader(id, csID);
-	glDeleteShader(csID);
 
 	return Shader{ id };
 }

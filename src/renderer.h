@@ -14,6 +14,7 @@
 #include "skybox.h"
 #include "framebuffer.h"
 #include "renderbuffer.h"
+#include "computeshader.h"
 
 class Renderer {
 	public:

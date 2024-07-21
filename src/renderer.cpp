@@ -78,11 +78,11 @@ Renderer Renderer::make() {
 
 	Camera camera = Camera::make(window, width, height);
 
-	Shader modelShader = Shader::makeGraphics("shaders/model.vert", "shaders/model.frag");
-	Shader depthShader = Shader::makeGraphics("shaders/depth.vert", "shaders/depth.frag");
-	Shader shadowShader = Shader::makeGraphics("shaders/shadow.vert", "shaders/depth.frag");
-	Shader skyboxShader = Shader::makeGraphics("shaders/cubemap.vert", "shaders/cubemap.frag");
-	Shader postprocessingShader = Shader::makeGraphics("shaders/postprocessing.vert", "shaders/postprocessing.frag");
+	Shader modelShader = Shader::make("shaders/model.vert", "shaders/model.frag");
+	Shader depthShader = Shader::make("shaders/depth.vert", "shaders/depth.frag");
+	Shader shadowShader = Shader::make("shaders/shadow.vert", "shaders/depth.frag");
+	Shader skyboxShader = Shader::make("shaders/cubemap.vert", "shaders/cubemap.frag");
+	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
 	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT32);
@@ -103,10 +103,10 @@ Renderer Renderer::make() {
 	Texture brdfLUT = Texture::make2D(m_brdfLUTSize, m_brdfLUTSize, GL_RG16F, nullptr, GL_RG, GL_FLOAT, GL_LINEAR, GL_LINEAR);
 	modelShader.setUniform("brdfLUTex", brdfLUT.handle());
 
-	Shader brdfIntegral = Shader::makeCompute("shaders/brdfintegral.comp");
+	ComputeShader brdfIntegral = ComputeShader::make("shaders/brdfintegral.comp");
 	brdfIntegral.bind();
-	glBindImageTexture(0, brdfLUT.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG16F);
-	glDispatchCompute(m_brdfLUTSize, m_brdfLUTSize, 1);
+	brdfLUT.bindForCompute(0, GL_WRITE_ONLY);
+	brdfIntegral.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_brdfLUTSize, m_brdfLUTSize);
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
@@ -148,8 +148,17 @@ void Renderer::draw() {
 	glm::mat4 lightMatrix{ calcLightMatrix(modelMatrix) };
 	glm::mat3 normalMatrix{ glm::transpose(glm::inverse(modelMatrix)) };
 
-	// shadow pass
+	// depth pass
 	glDepthMask(GL_TRUE);
+	glViewport(0, 0, m_width, m_height);
+	m_multisampledBuffer.bind();
+	glClear(GL_DEPTH_BUFFER_BIT);
+	m_depthShader.bind();
+	m_depthShader.setUniform("camMatrix", camMatrix);
+	m_depthShader.setUniform("modelMatrix", modelMatrix);
+	m_model.draw();
+
+	// shadow pass
 	glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
 	m_shadowmapBuffer.bind();
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -159,17 +168,11 @@ void Renderer::draw() {
 	m_shadowShader.setUniform("normalMatrix", normalMatrix);
 	m_model.draw();
 
-	// depth pass
-	glViewport(0, 0, m_width, m_height);
-	m_multisampledBuffer.bind();
-	glClear(GL_DEPTH_BUFFER_BIT);
-	m_depthShader.bind();
-	m_depthShader.setUniform("camMatrix", camMatrix);
-	m_depthShader.setUniform("modelMatrix", modelMatrix);
-	m_model.draw();
-
+	
 	// color pass
 	glDepthMask(GL_FALSE);
+	glViewport(0, 0, m_width, m_height);
+	m_multisampledBuffer.bind();
 	m_modelShader.bind();
 	m_modelShader.setUniform("camMatrix", camMatrix);
 	m_modelShader.setUniform("modelMatrix", modelMatrix);

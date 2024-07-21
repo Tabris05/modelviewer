@@ -22,20 +22,21 @@ class Shader {
 		void setUniform(const char* uniform, float value);
 		void setUniform(const char* uniform, int value);
 
-		static Shader makeGraphics(const char* vsPath, const char* fsPath);
-		static Shader makeCompute(const char* csPath);
+		static Shader make(const char* vsPath, const char* fsPath);
 		Shader(const Shader& src) = default;
 		Shader(Shader&& src) = default;
 		Shader& operator=(const Shader& src);
 		Shader& operator=(Shader&& src) noexcept;
 		~Shader();
 
-	private:
+	protected:
 		Shader(GLuint id);
 
 		static std::string getShaderSource(const char* path);
 
 		GLuint m_id;
+
+    private:
 		RefCounter m_rc;
 		static inline GLuint m_boundID = 0;
 

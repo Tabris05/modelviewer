@@ -9,6 +9,7 @@ class Texture {
 		GLuint id() const;
 		GLuint64 handle() const;
 
+		void bindForCompute(GLuint binding, GLenum access) const;
 
 		static Texture make2D(
 			int width,
@@ -41,11 +42,12 @@ class Texture {
 		Texture& operator=(Texture&& src) noexcept;
 		~Texture();
 	private:
-		Texture(GLuint id, GLuint64 handle);
+		Texture(GLuint id, GLuint64 handle, GLenum internalFormat);
 
 		GLuint m_id;
 		GLuint64 m_handle;
 		RefCounter m_rc;
+		GLenum m_internalFormat;
 };
 
 #endif
