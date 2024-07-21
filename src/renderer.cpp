@@ -66,7 +66,6 @@ Renderer Renderer::make() {
 
 	glDepthFunc(GL_GEQUAL); // reverse z
 	glClearDepth(0.0f);
-	glPolygonOffset(-10.0f, -1.0f);
 	glCullFace(GL_BACK);
 
 	ImGui::CreateContext();
@@ -81,6 +80,7 @@ Renderer Renderer::make() {
 
 	Shader modelShader = Shader::makeGraphics("shaders/model.vert", "shaders/model.frag");
 	Shader depthShader = Shader::makeGraphics("shaders/depth.vert", "shaders/depth.frag");
+	Shader shadowShader = Shader::makeGraphics("shaders/shadow.vert", "shaders/depth.frag");
 	Shader skyboxShader = Shader::makeGraphics("shaders/cubemap.vert", "shaders/cubemap.frag");
 	Shader postprocessingShader = Shader::makeGraphics("shaders/postprocessing.vert", "shaders/postprocessing.frag");
 
@@ -120,6 +120,7 @@ Renderer Renderer::make() {
 		std::move(camera),
 		std::move(modelShader),
 		std::move(depthShader),
+		std::move(shadowShader),
 		std::move(skyboxShader),
 		std::move(postprocessingShader),
 		std::move(shadowmapBuffer),
@@ -149,21 +150,22 @@ void Renderer::draw() {
 
 	// shadow pass
 	glDepthMask(GL_TRUE);
-	glEnable(GL_POLYGON_OFFSET_FILL);
 	glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
 	m_shadowmapBuffer.bind();
 	glClear(GL_DEPTH_BUFFER_BIT);
-	m_depthShader.bind();
-	m_depthShader.setUniform("camMatrix", lightMatrix);
-	m_depthShader.setUniform("modelMatrix", modelMatrix);
+	m_shadowShader.bind();
+	m_shadowShader.setUniform("camMatrix", lightMatrix);
+	m_shadowShader.setUniform("modelMatrix", modelMatrix);
+	m_shadowShader.setUniform("normalMatrix", normalMatrix);
 	m_model.draw();
 
 	// depth pass
-	glDisable(GL_POLYGON_OFFSET_FILL);
 	glViewport(0, 0, m_width, m_height);
 	m_multisampledBuffer.bind();
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	m_depthShader.bind();
 	m_depthShader.setUniform("camMatrix", camMatrix);
+	m_depthShader.setUniform("modelMatrix", modelMatrix);
 	m_model.draw();
 
 	// color pass
@@ -342,6 +344,7 @@ Renderer::Renderer(
 	Camera camera,
 	Shader modelShader,
 	Shader depthShader,
+	Shader shadowShader,
 	Shader skyboxShader,
 	Shader postprocessingShader,
 	FrameBuffer shadowmapBuffer,
@@ -362,6 +365,7 @@ Renderer::Renderer(
 	m_camera{ std::move(camera) },
 	m_modelShader{ std::move(modelShader) },
 	m_depthShader{ std::move(depthShader) },
+	m_shadowShader{ std::move(shadowShader) },
 	m_skyboxShader{ std::move(skyboxShader) },
 	m_postprocessingShader{ std::move(postprocessingShader) },
 	m_shadowmapBuffer{ std::move(shadowmapBuffer) },

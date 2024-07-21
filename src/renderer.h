@@ -42,6 +42,7 @@ class Renderer {
 			Camera camera,
 			Shader modelShader,
 			Shader depthShader,
+			Shader shadowShader,
 			Shader skyboxShader,
 			Shader postprocessingShader,
 			FrameBuffer shadowmapBuffer,
@@ -60,6 +61,7 @@ class Renderer {
 		Camera m_camera;
 		Shader m_modelShader;
 		Shader m_depthShader;
+		Shader m_shadowShader;
 		Shader m_skyboxShader;
 		Shader m_postprocessingShader;
 		FrameBuffer m_shadowmapBuffer;
@@ -87,7 +89,7 @@ class Renderer {
 
 		constexpr static inline int m_brdfLUTSize = 512;
 
-		// if anything is modified here, a modification must also be made to the macro definitions in model.frag
+		// if anything is modified here, a modification must also be made to the macro definitions in shadow.vert and model.frag
 		constexpr static inline int m_shadowmapResolution = 2048;
 		constexpr static inline int m_poissonDiskWindowSize = 8;
 		constexpr static inline int m_poissonDiskFilterSize = 16;

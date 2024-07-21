@@ -87,7 +87,7 @@ float isotrophicNDFFilter(vec3 normal, float roughness) {
 
 float inShadow() {
 	float result = 0.0f;
-	float bias = mix(0.01f, 0.0f, dot(fNorm, lightAngle));
+	float bias = mix(0.02f, 0.0f, dot(fNorm, lightAngle));
 	vec3 projectedPos = fPosLight.xyz / fPosLight.w;
 	projectedPos.xy = projectedPos.xy * 0.5f + 0.5f;
 	ivec3 offset = ivec3(0, ivec2(mod(gl_FragCoord.xy, ivec2(WINDOWSIZE))));

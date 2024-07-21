@@ -188,5 +188,6 @@
     <None Include="shaders\skyboxconvolution.frag" />
     <None Include="shaders\skyboxprefilter.frag" />
     <None Include="shaders\brdfintegral.comp" />
+    <None Include="shaders\shadow.vert" />
   </ItemGroup>
 </Project>
