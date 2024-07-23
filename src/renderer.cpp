@@ -9,6 +9,10 @@
 #include <random>
 #include "dbg.h"
 
+// SSBOs:
+// 0 - materials
+// 1 - shadow map noise
+
 void Renderer::run() {
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
@@ -67,6 +71,8 @@ Renderer Renderer::make() {
 	glDepthFunc(GL_GEQUAL); // reverse z
 	glClearDepth(0.0f);
 	glCullFace(GL_BACK);
+	glBlendFunc(GL_ONE, GL_ONE);
+	glBlendEquation(GL_FUNC_ADD);
 
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -82,7 +88,9 @@ Renderer Renderer::make() {
 	Shader depthShader = Shader::make("shaders/depth.vert", "shaders/depth.frag");
 	Shader shadowShader = Shader::make("shaders/shadow.vert", "shaders/depth.frag");
 	Shader skyboxShader = Shader::make("shaders/cubemap.vert", "shaders/cubemap.frag");
-	Shader postprocessingShader = Shader::make("shaders/postprocessing.vert", "shaders/postprocessing.frag");
+	Shader bloomDownsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomdownsample.frag");
+	Shader bloomUpsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomupsample.frag");
+	Shader postprocessingShader = Shader::make("shaders/screentri.vert", "shaders/postprocessing.frag");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
 	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT32);
@@ -111,6 +119,24 @@ Renderer Renderer::make() {
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
 
+	int bufferWidth = width;
+	int bufferHeight = height;
+	size_t numMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
+	Texture bloomTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+	std::vector<FrameBuffer> bloomFrameBuffers;
+	std::vector<glm::ivec2> bloomBufferSizes;
+	for (size_t i = 0; i < numMips; i++) {
+		FrameBuffer curMip = FrameBuffer::make();
+		curMip.attachTexture(bloomTarget, GL_COLOR_ATTACHMENT0, i);
+		bloomFrameBuffers.emplace_back(curMip);
+		bloomBufferSizes.emplace_back(bufferWidth, bufferHeight);
+		bufferWidth /= 2;
+		bufferHeight /= 2;
+	}
+	bloomDownsampleShader.setUniform("inputTex", bloomTarget.handle());
+	bloomUpsampleShader.setUniform("inputTex", bloomTarget.handle());
+	postprocessingShader.setUniform("bloomTex", bloomTarget.handle());
+
 	return Renderer { 
 		window,
 		width,
@@ -122,6 +148,8 @@ Renderer Renderer::make() {
 		std::move(depthShader),
 		std::move(shadowShader),
 		std::move(skyboxShader),
+		std::move(bloomDownsampleShader),
+		std::move(bloomUpsampleShader),
 		std::move(postprocessingShader),
 		std::move(shadowmapBuffer),
 		std::move(multisampledBuffer),
@@ -129,9 +157,12 @@ Renderer Renderer::make() {
 		std::move(multisampledColorTarget),
 		std::move(multisampledDepthTarget),
 		std::move(brdfLUT),
+		std::move(bloomTarget),
 		std::move(shadowmapTarget),
 		std::move(postprocessingTarget),
-		std::move(poissonDisks)
+		std::move(poissonDisks),
+		std::move(bloomFrameBuffers),
+		std::move(bloomBufferSizes)
 	};
 }
 
@@ -189,15 +220,44 @@ void Renderer::draw() {
 	m_skyboxShader.setUniform("camMatrix", camMatrixNoTranslation);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glTextureBarrier();
-	
-	// post processing pass
-	glDisable(GL_DEPTH_TEST);
+
+	// resolve pass
 	m_multisampledBuffer.blitTo(m_postprocessingBuffer, GL_COLOR_BUFFER_BIT, m_width, m_height);
-	m_multisampledBuffer.unbind();
+
+	// bloom pass
+	m_postprocessingBuffer.blitTo(m_bloomFrameBuffers.front(), GL_COLOR_BUFFER_BIT, m_width, m_height);
+
+	if (m_bloomEnabled) {
+		m_bloomDownsampleShader.bind();
+		m_bloomDownsampleShader.setUniform("gamma", m_gamma);
+		for (int i = 1; i < m_bloomFrameBuffers.size(); i++) {
+			glViewport(0, 0, m_bloomBufferSizes[i].x, m_bloomBufferSizes[i].y);
+			m_bloomFrameBuffers[i].bind();
+			m_bloomDownsampleShader.setUniform("inputMip", i - 1);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+			glTextureBarrier();
+		}
+		glEnable(GL_BLEND);
+		m_bloomUpsampleShader.bind();
+		for (int i = m_bloomFrameBuffers.size() - 1; i >= 1; i--) {
+			glViewport(0, 0, m_bloomBufferSizes[i - 1].x, m_bloomBufferSizes[i - 1].y);
+			m_bloomFrameBuffers[i - 1].bind();
+			m_bloomUpsampleShader.setUniform("inputMip", i);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+			glTextureBarrier();
+		}
+		glDisable(GL_BLEND);
+		m_bloomFrameBuffers.front().unbind();
+	}
+	else {
+		m_multisampledBuffer.unbind();
+	}
+
+	// post processing pass
+	glViewport(0, 0, m_width, m_height);
 	m_postprocessingShader.bind();
 	m_postprocessingShader.setUniform("gamma", m_gamma);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glEnable(GL_DEPTH_TEST);
 
 	// UI pass
 	ImGui_ImplOpenGL3_NewFrame();
@@ -248,6 +308,8 @@ void Renderer::drawOptionsMenu(float horizontalScale, float verticalScale) {
 	ImGui::SliderFloat("FOV", &m_fov, 60.0f, 120.0f);
 	ImGui::SliderFloat("Gamma", &m_gamma, 1.0f, 4.4f);
 	ImGui::Checkbox("VSync", &m_vsyncEnabled);
+	ImGui::SameLine();
+	ImGui::Checkbox("Bloom", &m_bloomEnabled);
 	ImGui::NewLine();
 	ImGui::Text("Performance");
 	ImGui::Text("%.0f FPS, %.2fms", m_fpsLastSecond, 1000.0 / m_fpsLastSecond);
@@ -296,6 +358,25 @@ void Renderer::resizeWindow(int width, int height) {
 	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
+
+	int bufferWidth = width;
+	int bufferHeight = height;
+	size_t numMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
+	m_bloomTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+	m_bloomFrameBuffers.clear();
+	m_bloomBufferSizes.clear();
+	for (size_t i = 0; i < numMips; i++) {
+		FrameBuffer curMip = FrameBuffer::make();
+		curMip.attachTexture(m_bloomTarget, GL_COLOR_ATTACHMENT0, i);
+		m_bloomFrameBuffers.emplace_back(curMip);
+		m_bloomBufferSizes.emplace_back(bufferWidth, bufferHeight);
+		bufferWidth /= 2;
+		bufferHeight /= 2;
+	}
+	m_bloomDownsampleShader.setUniform("inputTex", m_bloomTarget.handle());
+	m_bloomUpsampleShader.setUniform("inputTex", m_bloomTarget.handle());
+	m_postprocessingShader.setUniform("bloomTex", m_bloomTarget.handle());
+
 	glViewport(0, 0, width, height);
 	draw();
 }
@@ -350,6 +431,8 @@ Renderer::Renderer(
 	Shader depthShader,
 	Shader shadowShader,
 	Shader skyboxShader,
+	Shader bloomDownsampleShader,
+	Shader bloomUpsampleShader,
 	Shader postprocessingShader,
 	FrameBuffer shadowmapBuffer,
 	FrameBuffer multisampledBuffer,
@@ -357,9 +440,12 @@ Renderer::Renderer(
 	RenderBuffer multisampledColorTarget,
 	RenderBuffer multisampledDepthTarget,
 	Texture brdfLUT,
+	Texture bloomTarget,
 	Texture shadowmapTarget,
 	Texture postprocessingTarget,
-	ShaderStorageBuffer poissonDisks
+	ShaderStorageBuffer poissonDisks,
+	std::vector<FrameBuffer> bloomFrameBuffers,
+	std::vector<glm::ivec2> bloomBufferSizes
 ) :
 	m_window{ window },
 	m_width{ width },
@@ -371,6 +457,8 @@ Renderer::Renderer(
 	m_depthShader{ std::move(depthShader) },
 	m_shadowShader{ std::move(shadowShader) },
 	m_skyboxShader{ std::move(skyboxShader) },
+	m_bloomDownsampleShader{ std::move(bloomDownsampleShader) },
+	m_bloomUpsampleShader{ std::move(bloomUpsampleShader) },
 	m_postprocessingShader{ std::move(postprocessingShader) },
 	m_shadowmapBuffer{ std::move(shadowmapBuffer) },
 	m_multisampledBuffer{ std::move(multisampledBuffer) },
@@ -378,9 +466,12 @@ Renderer::Renderer(
 	m_multisampledColorTarget{ std::move(multisampledColorTarget) },
 	m_multisampledDepthTarget{ std::move(multisampledDepthTarget) },
 	m_brdfLUT{ std::move(brdfLUT) },
+	m_bloomTarget{ std::move(bloomTarget) },
 	m_shadowmapTarget{ std::move(shadowmapTarget) },
 	m_postprocessingTarget{ std::move(postprocessingTarget) },
-	m_poissonDisks{ std::move(poissonDisks) } {
+	m_poissonDisks{ std::move(poissonDisks) },
+	m_bloomFrameBuffers{ std::move(bloomFrameBuffers) },
+	m_bloomBufferSizes{ std::move(bloomBufferSizes) } {
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(m_window, [] (GLFWwindow* window, int x, int y) { static_cast<Renderer*>(glfwGetWindowUserPointer(window))->resizeWindow(x, y); });
 }

@@ -5,6 +5,7 @@ in vec2 fUV;
 
 uniform float gamma;
 layout(bindless_sampler) uniform sampler2D inputTex;
+layout(bindless_sampler) uniform sampler2D bloomTex;
 
 out vec3 FragColor;
 
@@ -19,7 +20,7 @@ vec3 gammaCorrect(vec3 inputColor) {
 }
 
 void main() {
-	vec3 color = texture(inputTex, fUV).rgb;
+	vec3 color = mix(texture(inputTex, fUV).rgb, textureLod(bloomTex, fUV, 0).rgb, 0.04f);
 	color = toneMap(color, 25.0f);
 	color = gammaCorrect(color);
 	FragColor = color;

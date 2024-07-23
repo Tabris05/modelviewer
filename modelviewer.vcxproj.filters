@@ -175,7 +175,7 @@
     <None Include="shaders\model.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="shaders\postprocessing.vert">
+    <None Include="shaders\screentri.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="shaders\postprocessing.frag">
@@ -195,5 +195,7 @@
     <None Include="shaders\skyboxprefilter.frag" />
     <None Include="shaders\brdfintegral.comp" />
     <None Include="shaders\shadow.vert" />
+    <None Include="shaders\bloomdownsample.frag" />
+    <None Include="shaders\bloomupsample.frag" />
   </ItemGroup>
 </Project>

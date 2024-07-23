@@ -45,6 +45,8 @@ class Renderer {
 			Shader depthShader,
 			Shader shadowShader,
 			Shader skyboxShader,
+			Shader bloomDownsampleShader,
+			Shader bloomUpsampleShader,
 			Shader postprocessingShader,
 			FrameBuffer shadowmapBuffer,
 			FrameBuffer multisampledBuffer,
@@ -52,9 +54,12 @@ class Renderer {
 			RenderBuffer multisampledColorTarget,
 			RenderBuffer multisampledDepthTarget,
 			Texture brdfLUT,
+			Texture bloomTarget,
 			Texture shadowmapTarget,
 			Texture postprocessingTarget,
-			ShaderStorageBuffer poissonDisks
+			ShaderStorageBuffer poissonDisks,
+			std::vector<FrameBuffer> bloomFrameBuffers,
+			std::vector<glm::ivec2> bloomBufferSizes
 		);
 		
 		Model m_model;
@@ -64,6 +69,8 @@ class Renderer {
 		Shader m_depthShader;
 		Shader m_shadowShader;
 		Shader m_skyboxShader;
+		Shader m_bloomDownsampleShader;
+		Shader m_bloomUpsampleShader;
 		Shader m_postprocessingShader;
 		FrameBuffer m_shadowmapBuffer;
 		FrameBuffer m_multisampledBuffer;
@@ -71,10 +78,15 @@ class Renderer {
 		RenderBuffer m_multisampledColorTarget;
 		RenderBuffer m_multisampledDepthTarget;
 		Texture m_brdfLUT;
+		Texture m_bloomTarget;
 		Texture m_shadowmapTarget;
 		Texture m_postprocessingTarget;
 		ShaderStorageBuffer m_poissonDisks;
 		GLFWwindow* m_window;
+
+		std::vector<FrameBuffer> m_bloomFrameBuffers;
+		std::vector<glm::ivec2> m_bloomBufferSizes;
+
 		int m_width, m_height;
 		double m_curFrame = 0.0, m_lastFrame = 0.0;
 
@@ -87,8 +99,10 @@ class Renderer {
 		glm::quat m_modelRotation{ glm::mat4{ 1.0f } };
 		float m_lightIntensity = 5.0f, m_fov = 90.0f, m_gamma = 2.2f, m_modelScale = 100.0f;
 		bool m_vsyncEnabled = true;
+		bool m_bloomEnabled = true;
 
 		constexpr static inline int m_brdfLUTSize = 512;
+		constexpr static inline size_t m_bloomDepth = 5;
 
 		// if anything is modified here, a modification must also be made to the macro definitions in shadow.vert and model.frag
 		constexpr static inline int m_shadowmapResolution = 2048;

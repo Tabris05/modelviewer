@@ -122,7 +122,7 @@ float ggxNDF(vec3 normal, vec3 halfway, float alpha) {
 	float alpha2 = alpha * alpha;
 	float nDotH = clampedDot(normal, halfway);
 	float denom = nDotH * nDotH * (alpha2 - 1.0f) + 1.0f;
-	return alpha2 / (PI * denom * denom);
+	return alpha2 / (PI * denom * denom + EPSILON);
 }
 
 float geometrySmith(vec3 normal, vec3 viewDir, vec3 lightAngle, float roughness) {
@@ -135,12 +135,12 @@ float geometrySmith(vec3 normal, vec3 viewDir, vec3 lightAngle, float roughness)
 	return gSub1 * gSub2;
 }
 
-vec3 fresnelSchlick(vec3 halfway, vec3 viewDir, vec3 F0) {
-	return F0 + (1.0f - F0) * pow(1.0f - clampedDot(halfway, viewDir), 5.0f);
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+	return F0 + (1.0f - F0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
 }
 
-vec3 fresnelSchlickRoughness(vec3 normal, vec3 viewDir, vec3 F0, float roughness) {
-	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - clampedDot(normal, viewDir), 5.0f);
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
 }
 
 vec3 directionalLight(vec3 viewDir, vec3 normal, vec3 albedo, float metalness, float roughness) {
@@ -149,22 +149,21 @@ vec3 directionalLight(vec3 viewDir, vec3 normal, vec3 albedo, float metalness, f
 	if(shadow == 0.0f) return vec3(0.0f);
 
 	vec3 halfway = normalize(viewDir + lightAngle);
-	vec3 F0 = mix(vec3(0.04f), albedo, metalness);
 
 	float distribution = ggxNDF(normal, halfway, roughness * roughness);
 	float geometry = geometrySmith(normal, viewDir, lightAngle, roughness);
-	vec3 fresnel = fresnelSchlick(halfway, viewDir, F0);
-
+	vec3 fresnel = fresnelSchlick(clampedDot(halfway, viewDir), mix(vec3(0.04f), albedo, metalness));
+	
 	vec3 numerator = distribution * geometry * fresnel;
 	float denominator = 4.0f * clampedDot(normal, viewDir) * clampedDot(normal, lightAngle) + EPSILON;
 	
 	vec3 specular = numerator / denominator;
-	vec3 diffuse = (vec3(1.0f) - fresnel) * (1.0f - metalness) * albedo / PI;
+	vec3 diffuse = (1.0f - fresnel) * (1.0f - metalness) * albedo / PI;
 	return (diffuse + specular) * clampedDot(normal, lightAngle) * lightColor * lightIntensity * shadow;
 }
 
 vec3 ambientLight(vec3 viewDir, vec3 normal, vec3 albedo, float metalness, float roughness, float occlusion) {
-	vec3 fresnel = fresnelSchlickRoughness(normal, viewDir, mix(vec3(0.04f), albedo, metalness), roughness);
+	vec3 fresnel = fresnelSchlickRoughness(clampedDot(normal, viewDir), mix(vec3(0.04f), albedo, metalness), roughness);
 	vec3 envMap = textureLod(envMapTex, reflect(-viewDir, normal), roughness * maxMip).rgb;
 	vec2 brdf = texture(brdfLUTex, vec2(clampedDot(normal, viewDir), roughness)).rg;
 	vec3 diffuse = (1.0f - fresnel) * (1.0f - metalness) * albedo * texture(irradianceTex, normal).rgb;
@@ -174,6 +173,7 @@ vec3 ambientLight(vec3 viewDir, vec3 normal, vec3 albedo, float metalness, float
  
 void main() {
 	vec3 viewDir = normalize(camPos - fPos);
+	
 	Material mat = materials[fMaterialIndex];
 	
 	vec4 materialColor = mat.baseColor;
@@ -193,7 +193,7 @@ void main() {
 	}
 
 	roughness = isotrophicNDFFilter(normal, roughness);
-	
+
 	fCol = directionalLight(viewDir, normal, materialColor.rgb, metalness, roughness)
 		 + ambientLight(viewDir, normal, materialColor.rgb, metalness, roughness, occlusion)
 		 + emissiveColor;
