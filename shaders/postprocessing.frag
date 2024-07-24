@@ -4,6 +4,7 @@
 in vec2 fUV;
 
 uniform float gamma;
+
 layout(bindless_sampler) uniform sampler2D inputTex;
 layout(bindless_sampler) uniform sampler2D bloomTex;
 

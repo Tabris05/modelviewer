@@ -229,7 +229,6 @@ void Renderer::draw() {
 
 	if (m_bloomEnabled) {
 		m_bloomDownsampleShader.bind();
-		m_bloomDownsampleShader.setUniform("gamma", m_gamma);
 		for (int i = 1; i < m_bloomFrameBuffers.size(); i++) {
 			glViewport(0, 0, m_bloomBufferSizes[i].x, m_bloomBufferSizes[i].y);
 			m_bloomFrameBuffers[i].bind();

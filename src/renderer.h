@@ -102,7 +102,7 @@ class Renderer {
 		bool m_bloomEnabled = true;
 
 		constexpr static inline int m_brdfLUTSize = 512;
-		constexpr static inline size_t m_bloomDepth = 5;
+		constexpr static inline size_t m_bloomDepth = 6;
 
 		// if anything is modified here, a modification must also be made to the macro definitions in shadow.vert and model.frag
 		constexpr static inline int m_shadowmapResolution = 2048;

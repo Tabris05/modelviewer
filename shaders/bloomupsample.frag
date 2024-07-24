@@ -4,12 +4,13 @@
 in vec2 fUV;
 
 uniform int inputMip;
+
 layout(bindless_sampler) uniform sampler2D inputTex;
 
 out vec3 fCol;
 
 void main() {
-	vec2 texelSize = 1.0f / textureSize(inputTex, inputMip);
+	vec2 texelSize = 1.5f / textureSize(inputTex, inputMip);
 
 	// MUST USE TEXTURE LOD
 	// Bloom targets are all just mips of the same base texture so we only want bilinear filtering when taking these taps

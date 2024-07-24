@@ -1,9 +1,10 @@
 #version 460 core
 #extension GL_ARB_bindless_texture : require
 
+#define EPSILON 0.000001f
+
 in vec2 fUV;
 
-uniform float gamma;
 uniform int inputMip;
 
 layout(bindless_sampler) uniform sampler2D inputTex;
@@ -16,6 +17,14 @@ float karis(vec3 inputColor) {
 
 vec3 fireflyFilter(vec3 group1, vec3 group2, vec3 group3, vec3 group4, vec3 group5) {
 	return group1 * karis(group1) + group2 * karis(group2) + group3 * karis(group3) + group4 * karis(group4) + group5 * karis(group5);
+}
+
+// apparently its not physically based to threshold bloom,
+// but I don't think its very physically plausible for wood to bloom under an average brightness light so I'm doing it anyways
+vec3 threshold(vec3 color) {
+	float brightness = max(color.r, max(color.g, color.b));
+	float contribution = max(0.0f, brightness - 1.0f) / max(brightness, EPSILON);
+	return color * contribution;
 }
 
 void main() {
@@ -39,7 +48,17 @@ void main() {
 
 	switch(inputMip) {
 		case 0:
-			fCol = fireflyFilter((a + b + d + e) * 0.03125f, (b + c + e + f) * 0.03125f, (d + e + g + h) * 0.03125f, (e + f + h + i) * 0.03125f, (j + k + l + m) * 0.125f);
+			a = threshold(a);
+			b = threshold(b); c = threshold(c); d = threshold(d); e = threshold(e);
+			f = threshold(f); g = threshold(g); h = threshold(h); i = threshold(i);
+			j = threshold(j); k = threshold(k); l = threshold(l); m = threshold(m);
+			fCol = fireflyFilter(
+				(a + b + d + e) * 0.03125f,
+				(b + c + e + f) * 0.03125f,
+				(d + e + g + h) * 0.03125f,
+				(e + f + h + i) * 0.03125f,
+				(j + k + l + m) * 0.125f
+			);
 			break;
 		default:
 			fCol = (a + c + g + i) * 0.03125f + (b + d + f + h) * 0.0625f + (e + j + k + l + m) * 0.125f;
