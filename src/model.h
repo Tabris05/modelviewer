@@ -2,7 +2,7 @@
 #define MODEL_H
 
 #include <filesystem>
-#include <fastgltf/parser.hpp>
+#include <fastgltf/core.hpp>
 #include "texture.h"
 #include "vertexbuffer.h"
 #include "indexbuffer.h"
@@ -32,7 +32,7 @@ class Model {
 			AABB aabb
 		);
 
-		static inline fastgltf::Parser m_parser;
+		static inline fastgltf::Parser m_parser{ fastgltf::Extensions::KHR_materials_emissive_strength };
 
 		AABB m_aabb;
 		glm::mat4 m_baseTransform;

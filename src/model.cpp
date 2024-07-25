@@ -53,7 +53,7 @@ Model Model::make(const std::filesystem::path& path) {
 		fastgltf::Options::GenerateMeshIndices |
 		fastgltf::Options::LoadExternalBuffers |
 		fastgltf::Options::LoadExternalImages;
-	const fastgltf::Asset asset{ std::move(m_parser.loadGLTF(&data, path.parent_path(), options).get()) };
+	const fastgltf::Asset asset{ std::move(m_parser.loadGltf(&data, path.parent_path(), options).get()) };
 
 	std::vector<Texture> textures;
 	std::vector<std::optional<Texture>> maybeTextures;
@@ -97,7 +97,7 @@ Model Model::make(const std::filesystem::path& path) {
 			curSampler = asset.samplers[curTexture.samplerIndex.value()];
 		}
 
-		const fastgltf::sources::Vector& data = std::get<fastgltf::sources::Vector>(asset.images[curTexture.imageIndex.value()].data);
+		const fastgltf::sources::Array& data = std::get<fastgltf::sources::Array>(asset.images[curTexture.imageIndex.value()].data);
 		int width, height, nrChannels;
 		unsigned char* bytes = stbi_load_from_memory(data.bytes.data(), data.bytes.size(), &width, &height, &nrChannels, 0);
 		
@@ -136,40 +136,52 @@ Model Model::make(const std::filesystem::path& path) {
 		return maybeTextures[index].value().handle();
 	};
 
-	for (const fastgltf::Material& curMaterial : asset.materials) {
-		Material val {
-			.m_baseColor{ glm::make_vec4(curMaterial.pbrData.baseColorFactor.data()) },
-			.m_emissiveColor{ glm::vec4(glm::make_vec3(curMaterial.emissiveFactor.data()), curMaterial.emissiveStrength.value_or(1.0f)) },
-			.m_metalness { curMaterial.pbrData.metallicFactor },
-			.m_roughness { curMaterial.pbrData.roughnessFactor },
-			.m_textureBitfield{ TextureBitfield::NONE }
+	if (!asset.materials.empty()) {
+		for (const fastgltf::Material& curMaterial : asset.materials) {
+			Material val{
+				.m_baseColor{ glm::make_vec4(curMaterial.pbrData.baseColorFactor.data()) },
+				.m_emissiveColor{ glm::vec4(glm::make_vec3(curMaterial.emissiveFactor.data()), curMaterial.emissiveStrength) },
+				.m_metalness { curMaterial.pbrData.metallicFactor },
+				.m_roughness { curMaterial.pbrData.roughnessFactor },
+				.m_textureBitfield{ TextureBitfield::NONE }
+			};
+
+			if (curMaterial.pbrData.baseColorTexture.has_value()) {
+				val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex, true);
+				val.m_textureBitfield |= TextureBitfield::HAS_ALBEDO;
+			}
+
+			if (curMaterial.normalTexture.has_value()) {
+				val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
+				val.m_textureBitfield |= TextureBitfield::HAS_NORMAL;
+			}
+
+			if (curMaterial.pbrData.metallicRoughnessTexture.has_value()) {
+				val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
+				val.m_textureBitfield |= TextureBitfield::HAS_METALLIC_ROUGHNESS;
+			}
+
+			if (curMaterial.occlusionTexture.has_value()) {
+				val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
+				val.m_textureBitfield |= TextureBitfield::HAS_OCCLUSION;
+			}
+
+			if (curMaterial.emissiveTexture.has_value()) {
+				val.m_emissiveHandle = processTexture(curMaterial.emissiveTexture.value().textureIndex, true);
+				val.m_textureBitfield |= TextureBitfield::HAS_EMISSIVE;
+			}
+
+			materials.emplace_back(val);
+		}
+	}
+	else {
+		Material val{
+				.m_baseColor{ 1.0f, 1.0f, 1.0f, 1.0f },
+				.m_emissiveColor{ 0.0f, 0.0f, 0.0f, 0.0f },
+				.m_metalness { 0.0f },
+				.m_roughness { 1.0f },
+				.m_textureBitfield{ TextureBitfield::NONE }
 		};
-
-		if (curMaterial.pbrData.baseColorTexture.has_value()) {
-			val.m_albedoHandle = processTexture(curMaterial.pbrData.baseColorTexture.value().textureIndex, true);
-			val.m_textureBitfield |= TextureBitfield::HAS_ALBEDO;
-		}
-
-		if (curMaterial.normalTexture.has_value()) {
-			val.m_normalHandle = processTexture(curMaterial.normalTexture.value().textureIndex);
-			val.m_textureBitfield |= TextureBitfield::HAS_NORMAL;
-		}
-
-		if (curMaterial.pbrData.metallicRoughnessTexture.has_value()) {
-			val.m_metallicRoughnessHandle = processTexture(curMaterial.pbrData.metallicRoughnessTexture.value().textureIndex);
-			val.m_textureBitfield |= TextureBitfield::HAS_METALLIC_ROUGHNESS;
-		}
-
-		if (curMaterial.occlusionTexture.has_value()) {
-			val.m_occlusionHandle = processTexture(curMaterial.occlusionTexture.value().textureIndex);
-			val.m_textureBitfield |= TextureBitfield::HAS_OCCLUSION;
-		}
-		
-		if (curMaterial.emissiveTexture.has_value()) {
-			val.m_emissiveHandle = processTexture(curMaterial.emissiveTexture.value().textureIndex, true);
-			val.m_textureBitfield |= TextureBitfield::HAS_EMISSIVE;
-		}
-
 		materials.emplace_back(val);
 	}
 
@@ -191,7 +203,7 @@ Model Model::make(const std::filesystem::path& path) {
 			[](fastgltf::Node::TransformMatrix matrix) {
 				return glm::make_mat4(matrix.data());
 			},
-			[](fastgltf::Node::TRS trs) {
+			[](fastgltf::TRS trs) {
 				return glm::translate(glm::mat4{ 1.0f }, glm::make_vec3(trs.translation.data()))
 				* glm::toMat4(glm::make_quat(trs.rotation.data()))
 				* glm::scale(glm::mat4{ 1.0f }, glm::make_vec3(trs.scale.data()));
@@ -241,7 +253,7 @@ Model Model::make(const std::filesystem::path& path) {
 					indices.emplace_back(index);
 				});
 
-				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value());
+				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value_or(0));
 			}
 		}
 		for (size_t i : curNode.children) self(i, transform);

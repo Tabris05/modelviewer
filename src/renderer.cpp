@@ -321,7 +321,7 @@ void Renderer::drawAssetMenu(float horizontalScale, float verticalScale) {
 	ImGui::SetWindowSize(ImVec2{ 500.0f * horizontalScale, 75.0f * verticalScale });
 	if (ImGui::Button("Load model")) {
 		std::filesystem::path modelPath{ m_modelPath };
-		if (std::filesystem::exists(modelPath) && modelPath.extension() == ".gltf") {
+		if (std::filesystem::exists(modelPath) && (modelPath.extension() == ".gltf" || modelPath.extension() == ".glb")) {
 			m_model = std::move(Model::make(modelPath));
 		}
 	}

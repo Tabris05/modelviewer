@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 - 2023 spnda
+ * Copyright (C) 2022 - 2024 spnda
  * This file is part of fastgltf <https://github.com/spnda/fastgltf>.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <string_view>
 #include <type_traits>
@@ -67,12 +68,34 @@
 
 #if FASTGLTF_CPP_23
 #define FASTGLTF_UNREACHABLE std::unreachable();
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
 #define FASTGLTF_UNREACHABLE __builtin_unreachable();
 #elif defined(_MSC_VER)
 #define FASTGLTF_UNREACHABLE __assume(false);
 #else
 #define FASTGLTF_UNREACHABLE assert(0);
+#endif
+
+#if defined(__has_builtin)
+#define FASTGLTF_HAS_BUILTIN(x) __has_builtin(x)
+#else
+#define FASTGLTF_HAS_BUILTIN(x) 0
+#endif
+
+#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_IX86)
+#define FASTGLTF_IS_X86 1
+#elif defined(_M_ARM64) || defined(__aarch64__)
+// __ARM_NEON is only for general Neon availability. It does not guarantee the full A64 instruction set.
+#define FASTGLTF_IS_A64 1
+#endif
+
+#if FASTGLTF_CPP_20 || (defined(__clang__) && __clang_major__ >= 12) || (defined(__GNUC__) && __GNUC__ >= 9)
+// These attributes were introduced with C++20, but Clang 12 already supports them since C++11.
+#define FASTGLTF_LIKELY [[likely]]
+#define FASTGLTF_UNLIKELY [[unlikely]]
+#else
+#define FASTGLTF_LIKELY
+#define FASTGLTF_UNLIKELY
 #endif
 
 #ifdef _MSC_VER
@@ -106,9 +129,9 @@ namespace fastgltf {
         return (flags & bit) == bit;
     }
 
-    template <typename T>
-    [[nodiscard]] constexpr T alignUp(T base, T alignment) {
-        static_assert(std::is_signed_v<T>, "alignUp requires type T to be signed.");
+    template <typename T, typename U>
+    [[nodiscard]] constexpr T alignUp(T base, U alignment) {
+        static_assert(std::is_signed_v<U>, "alignUp requires type U to be signed.");
         return (base + alignment - 1) & -alignment;
     }
 
@@ -125,6 +148,15 @@ namespace fastgltf {
 #endif
     [[nodiscard]] constexpr T max(T a, T b) noexcept {
         return (a > b) ? a : b;
+    }
+
+    template<typename T, typename... A>
+    [[noreturn]] constexpr void raise(A&&... args) {
+#ifdef __cpp_exceptions
+        throw T(std::forward<A>(args)...);
+#else
+        std::abort();
+#endif
     }
 
     /**
@@ -222,13 +254,18 @@ namespace fastgltf {
         return crc;
     }
 
-#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_IX86)
+#if defined(FASTGLTF_IS_X86)
     /**
      * Variant of crc32 that uses SSE4.2 instructions to increase performance. Note that this does not
      * check for availability of said instructions.
      */
-    [[gnu::hot, gnu::const]] std::uint32_t hwcrc32c(std::string_view str) noexcept;
-    [[gnu::hot, gnu::const]] std::uint32_t hwcrc32c(const std::uint8_t* d, std::size_t len) noexcept;
+    [[gnu::hot, gnu::const]] std::uint32_t sse_crc32c(std::string_view str) noexcept;
+    [[gnu::hot, gnu::const]] std::uint32_t sse_crc32c(const std::uint8_t* d, std::size_t len) noexcept;
+#elif defined(FASTGLTF_IS_A64) && !defined(_MSC_VER) && !defined(__ANDROID__)
+	// Both MSVC stdlib and Android NDK don't include the arm intrinsics
+#define FASTGLTF_ENABLE_ARMV8_CRC 1
+	[[gnu::hot, gnu::const]] std::uint32_t armv8_crc32c(std::string_view str) noexcept;
+	[[gnu::hot, gnu::const]] std::uint32_t armv8_crc32c(const std::uint8_t* d, std::size_t len) noexcept;
 #endif
 
     /**
@@ -247,7 +284,7 @@ namespace fastgltf {
 #if FASTGLTF_HAS_CONCEPTS
     requires std::integral<T>
 #endif
-    [[gnu::const]] inline std::uint8_t clz(T value) {
+    [[gnu::const]] constexpr std::uint8_t clz(T value) {
         static_assert(std::is_integral_v<T>);
 #if FASTGLTF_HAS_BIT
         return static_cast<std::uint8_t>(std::countl_zero(value));
@@ -267,7 +304,7 @@ namespace fastgltf {
     }
 
 	template <typename T>
-	[[gnu::const]] inline std::uint8_t popcount(T value) {
+	[[gnu::const]] constexpr std::uint8_t popcount(T value) {
 		static_assert(std::is_integral_v<T>);
 #if FASTGLTF_HAS_BIT
 		return static_cast<std::uint8_t>(std::popcount(value));
@@ -300,7 +337,7 @@ namespace fastgltf {
 	 * Helper type in order to allow building a visitor out of multiple lambdas within a call to
 	 * std::visit
 	 */
-	template<class... Ts> 
+	template<class... Ts>
 	struct visitor : Ts... {
 		using Ts::operator()...;
 	};
@@ -327,6 +364,42 @@ namespace fastgltf {
         static_assert(std::is_enum_v<T>); \
         return static_cast<T>(op to_underlying(a)); \
     }
+
+#if FASTGLTF_CPP_20 && defined(__cpp_lib_bit_cast) && __cpp_lib_bit_cast >= 201806L
+#define FASTGLTF_CONSTEXPR_BITCAST 1
+    template<typename To, typename From>
+    [[nodiscard]] constexpr To bit_cast(const From& from) noexcept {
+        return std::bit_cast<To>(from);
+    }
+#elif (defined(__clang__) || __clang_major__ >= 9) || (defined(__GNUC__) && __GNUC__ >= 11) || FASTGLTF_HAS_BUILTIN(__builtin_bit_cast)
+#define FASTGLTF_CONSTEXPR_BITCAST 1
+    template<typename To, typename From>
+    [[nodiscard]] constexpr To bit_cast(const From& from) noexcept {
+        // Available since Clang 9, GCC 11.1, and MSVC 16.6. Otherwise, this function could not be constexpr.
+        return __builtin_bit_cast(To, from);
+    }
+#else
+#define FASTGLTF_CONSTEXPR_BITCAST 0
+	template<typename To, typename From>
+	[[nodiscard]] To bit_cast(const From& from) noexcept {
+		static_assert(std::is_trivially_constructible_v<To>);
+		To dst;
+		std::memcpy(&dst, &from, sizeof(To));
+		return dst;
+	}
+#endif
+
+	/**
+	 * Returns the absolute value of the given integer in its unsigned type.
+	 * This avoids the issue with two complementary signed integers not being able to represent INT_MIN.
+	 */
+	template <typename T>
+	constexpr std::make_unsigned_t<T> uabs(T val) {
+		using unsigned_t = std::make_unsigned_t<T>;
+		return (val < 0)
+			? static_cast<unsigned_t>(-(val + 1)) + 1
+			: static_cast<unsigned_t>(val);
+	}
 } // namespace fastgltf
 
 #ifdef _MSC_VER
