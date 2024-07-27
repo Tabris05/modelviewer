@@ -23,7 +23,7 @@ glm::mat4 Model::baseTransform() const {
 }
 
 Model Model::make() {
-	std::vector<Texture> textures;
+	std::unordered_map<size_t, Texture> textures;
 	ShaderStorageBuffer materialBuf = ShaderStorageBuffer::make();
 	CommandBuffer cmdBuf = CommandBuffer::make();
 	VertexBuffer vBuf = VertexBuffer::make();
@@ -55,8 +55,7 @@ Model Model::make(const std::filesystem::path& path) {
 		fastgltf::Options::LoadExternalImages;
 	const fastgltf::Asset asset{ std::move(m_parser.loadGltf(&data, path.parent_path(), options).get()) };
 
-	std::vector<Texture> textures;
-	std::vector<std::optional<Texture>> maybeTextures;
+	std::unordered_map<size_t, Texture> textures;
 	std::vector<Material> materials;
 	std::vector<DrawCommand> cmds;
 	std::vector<Vertex> vertices;
@@ -75,7 +74,6 @@ Model Model::make(const std::filesystem::path& path) {
 	}
 
 	textures.reserve(asset.textures.size());
-	maybeTextures.resize(asset.textures.size());
 	materials.reserve(asset.materials.size());
 	cmds.reserve(numPrimitives);
 	vertices.reserve(verticesSize);
@@ -85,7 +83,7 @@ Model Model::make(const std::filesystem::path& path) {
 	
 	// helper function that returns a handle to the ith texture, or loads it if it hasn't been loaded already
 	auto processTexture = [&](size_t index, bool srgb = false) -> GLuint64 {
-		if (maybeTextures[index].has_value()) return maybeTextures[index].value().handle();
+		if (textures.contains(index)) return textures.at(index).handle();
 
 		const fastgltf::Texture& curTexture = asset.textures[index];
 
@@ -118,7 +116,7 @@ Model Model::make(const std::filesystem::path& path) {
 			break;
 		}
 
-		maybeTextures[index] = Texture::make2D(
+		textures.emplace(std::make_pair(index, Texture::make2D(
 			width,
 			height,
 			internalFormat,
@@ -129,11 +127,10 @@ Model Model::make(const std::filesystem::path& path) {
 			static_cast<GLenum>(curSampler.magFilter.value_or(fastgltf::Filter::Linear)),
 			static_cast<GLenum>(curSampler.wrapS),
 			static_cast<GLenum>(curSampler.wrapT)
-		);
+		)));
 
-		maybeTextures[index]->handle();
 		stbi_image_free(bytes);
-		return maybeTextures[index].value().handle();
+		return textures.at(index).handle();
 	};
 
 	if (!asset.materials.empty()) {
@@ -183,12 +180,6 @@ Model Model::make(const std::filesystem::path& path) {
 				.m_textureBitfield{ TextureBitfield::NONE }
 		};
 		materials.emplace_back(val);
-	}
-
-	// textures originally pushed into an array of optionals because it was possible a given texture had not yet been loaded
-	// yet now all textures should have values so continuing to use them as optionals is unnecessary
-	for (const std::optional<Texture>& curTexture : maybeTextures) {
-		textures.emplace_back(curTexture.value());
 	}
 
 	// helper function to load meshes, called recursively to traverse the tree of nodes
@@ -299,7 +290,7 @@ Model Model::make(const std::filesystem::path& path) {
 }
 
 Model::Model(
-	std::vector<Texture> textures,
+	std::unordered_map<size_t, Texture> textures,
 	ShaderStorageBuffer materialBuf,
 	CommandBuffer cmdBuf,
 	VertexBuffer vBuf,

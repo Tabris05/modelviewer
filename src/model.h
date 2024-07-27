@@ -2,6 +2,7 @@
 #define MODEL_H
 
 #include <filesystem>
+#include <unordered_map>
 #include <fastgltf/core.hpp>
 #include "texture.h"
 #include "vertexbuffer.h"
@@ -22,7 +23,7 @@ class Model {
 
 	private:
 		Model(
-			std::vector<Texture> textures,
+			std::unordered_map<size_t, Texture> textures,
 			ShaderStorageBuffer materialBuf,
 			CommandBuffer cmdBuf,
 			VertexBuffer vBuf,
@@ -36,7 +37,7 @@ class Model {
 
 		AABB m_aabb;
 		glm::mat4 m_baseTransform;
-		std::vector<Texture> m_textures;
+		std::unordered_map<size_t, Texture> m_textures;
 		ShaderStorageBuffer m_materialBuf;
 		CommandBuffer m_cmdBuf;
 		VertexBuffer m_vBuf;
