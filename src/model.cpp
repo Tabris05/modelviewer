@@ -6,6 +6,7 @@
 #define GLM_ENABLE_EXPERIMENTAL 1
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <mikktspace/mikktspace.h>
 #include "material.h"
 #include "texture.h"
 #include "dbg.h"
@@ -208,6 +209,12 @@ Model Model::make(const std::filesystem::path& path) {
 				size_t oldVerticesSize = vertices.size();
 				size_t oldIndicesSize = indices.size();
 
+				// really we should not assume we have indices and have an alternate path to deduplicate vertices to create an index buffer as a fallback
+				const fastgltf::Accessor& indexAccessor = asset.accessors[curPrimitive.indicesAccessor.value()];
+				fastgltf::iterateAccessor<GLuint>(asset, indexAccessor, [&indices](GLuint index) {
+					indices.emplace_back(index);
+				});
+
 				const fastgltf::Accessor& positionAccessor = asset.accessors[curPrimitive.findAttribute("POSITION")->second];
 				fastgltf::iterateAccessor<glm::vec3>(asset, positionAccessor, [&vertices, &aabb, transform](glm::vec3 pos) {
 					glm::vec3 vertex = glm::vec3(transform * glm::vec4(pos, 1.0f));
@@ -216,20 +223,12 @@ Model Model::make(const std::filesystem::path& path) {
 					vertices.emplace_back(vertex);
 				});
 
+				// the spec says normals are optional and if they are not provided the implementation should calculate flat normals
+				// but I'm not very interested in displaying the kinds of meshes that use flat normals anyways so I'll just assume normals are given for now
 				const fastgltf::Accessor& normalAccessor = asset.accessors[curPrimitive.findAttribute("NORMAL")->second];
 				fastgltf::iterateAccessorWithIndex<glm::vec3>(asset, normalAccessor, [&vertices, oldVerticesSize, normalTransform](glm::vec3 normal, size_t index) {
 					vertices[index + oldVerticesSize].m_normal = glm::normalize(normalTransform * normal);
 				});
-
-				// should probably have fallback to calculate tangents if not provided and normal map is present
-				const fastgltf::Primitive::attribute_type* tangentAccessorIndex;
-				if ((tangentAccessorIndex = curPrimitive.findAttribute("TANGENT")) != curPrimitive.attributes.cend()) {
-					const fastgltf::Accessor& tangentAccessor = asset.accessors[tangentAccessorIndex->second];
-					fastgltf::iterateAccessorWithIndex<glm::vec4>(asset, tangentAccessor, [&vertices, oldVerticesSize, transform](glm::vec4 tangent, size_t index) {
-						vertices[index + oldVerticesSize].m_tangent = glm::normalize(glm::vec3{ transform * glm::vec4{ glm::vec3{ tangent }, 0.0f } });
-						vertices[index + oldVerticesSize].m_tangentSign = tangent.w;
-					});
-				}
 
 				const fastgltf::Primitive::attribute_type* uvAccessorIndex;
 				if ((uvAccessorIndex = curPrimitive.findAttribute("TEXCOORD_0")) != curPrimitive.attributes.cend()) {
@@ -239,10 +238,58 @@ Model Model::make(const std::filesystem::path& path) {
 					});
 				}
 
-				const fastgltf::Accessor& indexAccessor = asset.accessors[curPrimitive.indicesAccessor.value()];
-				fastgltf::iterateAccessor<GLuint>(asset, indexAccessor, [&indices](GLuint index) {
-					indices.emplace_back(index);
-				});
+				const fastgltf::Primitive::attribute_type* tangentAccessorIndex;
+				if ((tangentAccessorIndex = curPrimitive.findAttribute("TANGENT")) != curPrimitive.attributes.cend()) {
+					const fastgltf::Accessor& tangentAccessor = asset.accessors[tangentAccessorIndex->second];
+					fastgltf::iterateAccessorWithIndex<glm::vec4>(asset, tangentAccessor, [&vertices, oldVerticesSize, transform](glm::vec4 tangent, size_t index) {
+						vertices[index + oldVerticesSize].m_tangent = glm::normalize(glm::vec3{ transform * glm::vec4{ glm::vec3{ tangent }, 0.0f } });
+						vertices[index + oldVerticesSize].m_tangentSign = tangent.w;
+					});
+				}
+				else if (uvAccessorIndex != curPrimitive.attributes.cend()) { // calculate tangents if they are not provided and we are able to
+					struct UsrPtr {
+						size_t vertexOffset;
+						size_t indexOffset;
+						std::vector<Vertex>& vertices;
+						std::vector<GLuint>& indices;
+					} usrPtr{ oldVerticesSize, oldIndicesSize, vertices, indices };
+
+					SMikkTSpaceInterface interface{
+						// get number of faces (triangles) in primitive
+						[](const SMikkTSpaceContext* ctx) -> int { 
+							UsrPtr* data = static_cast<UsrPtr*>(ctx->m_pUserData);
+							return (data->indices.size() - data->indexOffset) / 3;
+						},
+						// get number of vertices in face
+						[](const SMikkTSpaceContext*, const int) -> int {
+							return 3;
+						},
+						// get position of specified vertex
+						[](const SMikkTSpaceContext* ctx, float outPos[], const int face, const int vert) {
+							UsrPtr* data = static_cast<UsrPtr*>(ctx->m_pUserData);
+							memcpy(outPos, &data->vertices[data->vertexOffset + data->indices[data->indexOffset + face * 3 + vert]].m_position, sizeof(glm::vec3));
+						},
+						// get normal of specified vertex
+						[](const SMikkTSpaceContext* ctx, float outNorm[], const int face, const int vert) {
+							UsrPtr* data = static_cast<UsrPtr*>(ctx->m_pUserData);
+							memcpy(outNorm, &data->vertices[data->vertexOffset + data->indices[data->indexOffset + face * 3 + vert]].m_normal, sizeof(glm::vec3));
+						},
+						// get uv of specified vertex
+						[](const SMikkTSpaceContext* ctx, float outUV[], const int face, const int vert) {
+							UsrPtr* data = static_cast<UsrPtr*>(ctx->m_pUserData);
+							memcpy(outUV, &data->vertices[data->vertexOffset + data->indices[data->indexOffset + face * 3 + vert]].m_uv, sizeof(glm::vec2));
+						},
+						// set tangent of specified vertex
+						[](const SMikkTSpaceContext* ctx, const float inTangent[], const float sign, const int face, const int vert) {
+							UsrPtr* data = static_cast<UsrPtr*>(ctx->m_pUserData);
+							size_t vertexIndex = data->vertexOffset + data->indices[data->indexOffset + face * 3 + vert];
+							memcpy(&data->vertices[vertexIndex].m_tangent, inTangent, sizeof(glm::vec3));
+							data->vertices[vertexIndex].m_tangentSign = sign;
+						}
+					};
+					SMikkTSpaceContext ctx{ &interface, &usrPtr };
+					genTangSpaceDefault(&ctx);
+				}
 
 				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value_or(0));
 			}
