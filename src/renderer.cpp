@@ -14,9 +14,10 @@
 // 1 - shadow map noise
 
 // Images:
-// 0 - BRDF LUT (initialization) / Postprocessing Frame Buffer (runtime)
-// 1 - Bloom src / Skybox src
-// 2 - Bloom dst / Skybox dst
+// 0 - BRDF LUT (initialization) / Multisampled Frame Buffer (runtime)
+// 1 - Postprocessing Frame Buffer
+// 2 - Bloom src / Skybox src
+// 3 - Bloom dst / Skybox dst
 
 void Renderer::run() {
 	while (!glfwWindowShouldClose(m_window)) {
@@ -93,9 +94,11 @@ Renderer Renderer::make() {
 	Shader depthShader = Shader::make("shaders/depth.vert", "shaders/depth.frag");
 	Shader shadowShader = Shader::make("shaders/shadow.vert", "shaders/depth.frag");
 	Shader skyboxShader = Shader::make("shaders/cubemap.vert", "shaders/cubemap.frag");
+	ComputeShader resolveShader = ComputeShader::make("shaders/multisampleresolve.comp");
 	Shader bloomDownsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomdownsample.frag");
 	Shader bloomUpsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomupsample.frag");
 	ComputeShader postprocessingShader = ComputeShader::make("shaders/postprocessing.comp");
+
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
 	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT32);
@@ -103,14 +106,15 @@ Renderer Renderer::make() {
 	modelShader.setUniform("shadowmapTex", shadowmapTarget.handle());
 
 	FrameBuffer multisampledBuffer = FrameBuffer::make();
-	RenderBuffer multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_R11F_G11F_B10F);
-	RenderBuffer multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT32);
-	multisampledBuffer.attachRenderBuffer(multisampledColorTarget, GL_COLOR_ATTACHMENT0);
-	multisampledBuffer.attachRenderBuffer(multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
+	Texture multisampledColorTarget = Texture::make2DMultisampled(width, height, GL_R11F_G11F_B10F);
+	Texture multisampledDepthTarget = Texture::make2DMultisampled(width, height, GL_DEPTH_COMPONENT32);
+	multisampledBuffer.attachTexture(multisampledColorTarget, GL_COLOR_ATTACHMENT0);
+	multisampledBuffer.attachTexture(multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
 
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
 	Texture postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
+	postprocessingTarget.bindForCompute(1, GL_READ_WRITE);
 
 	Texture brdfLUT = Texture::make2D(m_brdfLUTSize, m_brdfLUTSize, GL_RG16F, nullptr, GL_RG, GL_FLOAT, GL_LINEAR, GL_LINEAR);
 	modelShader.setUniform("brdfLUTex", brdfLUT.handle());
@@ -119,7 +123,7 @@ Renderer Renderer::make() {
 	brdfIntegral.bind();
 	brdfLUT.bindForCompute(0, GL_WRITE_ONLY);
 	brdfIntegral.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_brdfLUTSize, m_brdfLUTSize);
-	postprocessingTarget.bindForCompute(0, GL_READ_WRITE);
+	multisampledColorTarget.bindForCompute(0, GL_READ_ONLY);
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
@@ -153,6 +157,7 @@ Renderer Renderer::make() {
 		std::move(depthShader),
 		std::move(shadowShader),
 		std::move(skyboxShader),
+		std::move(resolveShader),
 		std::move(bloomDownsampleShader),
 		std::move(bloomUpsampleShader),
 		std::move(postprocessingShader),
@@ -226,11 +231,14 @@ void Renderer::draw() {
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glTextureBarrier();
 
-	// resolve pass
-	m_multisampledBuffer.blitTo(m_postprocessingBuffer, GL_COLOR_BUFFER_BIT, m_width, m_height);
+	// resolve pass (MSAA only works well in ldr color space, so we do a custom resolve that tonemaps each sample and then combines them
+	// we then inverse tonemap the result since the bloom buffer needs to be composited in hdr color space)
+	m_resolveShader.bind();
+	m_resolveShader.dispatch(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT, m_width, m_height);
 
-	// bloom pass
-	m_postprocessingBuffer.blitTo(m_bloomFrameBuffers.front(), GL_COLOR_BUFFER_BIT, m_width, m_height);
+	// bloom pass (we can hardware resolve here since any aliasing will be resolved by the blurring
+	// and this texture does not contribute strongly to the final output anyways)
+	m_multisampledBuffer.blitTo(m_bloomFrameBuffers.front(), GL_COLOR_BUFFER_BIT, m_width, m_height);
 
 	m_multisampledBuffer.unbind();
 	if (m_bloomEnabled) {
@@ -256,7 +264,6 @@ void Renderer::draw() {
 	}
 
 	// post processing pass
-	glViewport(0, 0, m_width, m_height);
 	m_postprocessingShader.bind();
 	m_postprocessingShader.setUniform("gamma", m_gamma);
 	m_postprocessingShader.dispatch(GL_FRAMEBUFFER_BARRIER_BIT, m_width, m_height);
@@ -354,13 +361,16 @@ void Renderer::resizeWindow(int width, int height) {
 	m_width = width;
 	m_height = height;
 	m_camera.updateSize(width, height);
+
+	m_multisampledColorTarget = Texture::make2DMultisampled(width, height, GL_R11F_G11F_B10F);
+	m_multisampledDepthTarget = Texture::make2DMultisampled(width, height, GL_DEPTH_COMPONENT32);
+	m_multisampledBuffer.attachTexture(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
+	m_multisampledBuffer.attachTexture(m_multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
+	m_multisampledColorTarget.bindForCompute(0, GL_READ_ONLY);
 	m_postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
-	m_postprocessingTarget.bindForCompute(0, GL_READ_WRITE);
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	m_multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_R11F_G11F_B10F);
-	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
-	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
-	m_multisampledBuffer.attachRenderBuffer(m_multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
+	m_postprocessingTarget.bindForCompute(1, GL_READ_WRITE);
+
 
 	int bufferWidth = width;
 	int bufferHeight = height;
@@ -434,14 +444,15 @@ Renderer::Renderer(
 	Shader depthShader,
 	Shader shadowShader,
 	Shader skyboxShader,
+	ComputeShader resolveShader,
 	Shader bloomDownsampleShader,
 	Shader bloomUpsampleShader,
 	ComputeShader postprocessingShader,
 	FrameBuffer shadowmapBuffer,
 	FrameBuffer multisampledBuffer,
 	FrameBuffer postprocessingBuffer,
-	RenderBuffer multisampledColorTarget,
-	RenderBuffer multisampledDepthTarget,
+	Texture multisampledColorTarget,
+	Texture multisampledDepthTarget,
 	Texture brdfLUT,
 	Texture bloomTarget,
 	Texture shadowmapTarget,
@@ -460,6 +471,7 @@ Renderer::Renderer(
 	m_depthShader{ std::move(depthShader) },
 	m_shadowShader{ std::move(shadowShader) },
 	m_skyboxShader{ std::move(skyboxShader) },
+	m_resolveShader{ std::move(resolveShader) },
 	m_bloomDownsampleShader{ std::move(bloomDownsampleShader) },
 	m_bloomUpsampleShader{ std::move(bloomUpsampleShader) },
 	m_postprocessingShader{ std::move(postprocessingShader) },

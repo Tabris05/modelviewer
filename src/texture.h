@@ -23,6 +23,11 @@ class Texture {
 			GLenum wrapS = GL_CLAMP_TO_EDGE,
 			GLenum wrapT = GL_CLAMP_TO_EDGE
 		);
+		static Texture make2DMultisampled(
+			int width,
+			int height,
+			GLenum internalFormat = GL_RGB8
+		);
 		static Texture makeCube(
 			int width,
 			int height,

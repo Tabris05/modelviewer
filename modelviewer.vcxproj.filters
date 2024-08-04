@@ -87,9 +87,6 @@
     <ClCompile Include="src\framebuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\renderbuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="include\imGuIZMOquat\imGuIZMOquat.cpp">
       <Filter>Source Files\Dependencies</Filter>
     </ClCompile>
@@ -161,9 +158,6 @@
     <ClInclude Include="src\framebuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\renderbuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\skybox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -179,9 +173,6 @@
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="shaders\screentri.vert">
-      <Filter>Resource Files\Shaders</Filter>
-    </None>
-    <None Include="shaders\postprocessing.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="shaders\depth.vert">
@@ -203,5 +194,6 @@
     <None Include="shaders\postprocessing.comp">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="shaders\multisampleresolve.comp" />
   </ItemGroup>
 </Project>

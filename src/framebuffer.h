@@ -3,7 +3,6 @@
 
 #include <glad/glad.h>
 #include "refcounter.h"
-#include "renderbuffer.h"
 #include "texture.h"
 
 class FrameBuffer {
@@ -13,8 +12,6 @@ class FrameBuffer {
 		GLuint id() const;
 		void attachTexture(const Texture& texture, GLenum attachment, int mip = 0);
 		void detachTexture(GLenum attachment, int mip = 0);
-		void attachRenderBuffer(const RenderBuffer& renderBuffer, GLenum attachment);
-		void detachRenderBuffer(GLenum attachment);
 		void blitTo(FrameBuffer& dst, GLenum mask, int x, int y);
 		void blitToDefault(GLenum mask, int x, int y);
 	

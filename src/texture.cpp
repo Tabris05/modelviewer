@@ -51,6 +51,23 @@ Texture Texture::make2D(
 	return Texture{ id, handle, internalFormat };
 }
 
+Texture Texture::make2DMultisampled(
+	int width,
+	int height,
+	GLenum internalFormat
+) {
+	GLuint id;
+	glCreateTextures(GL_TEXTURE_2D_MULTISAMPLE, 1, &id);
+
+	glTextureStorage2DMultisample(id, 8, internalFormat, width, height, GL_TRUE);
+
+	GLuint64 handle = glGetTextureHandleARB(id);
+	glMakeTextureHandleResidentARB(handle);
+
+	return Texture{ id, handle, internalFormat };
+}
+
+
 Texture Texture::makeCube(
 	int width,
 	int height,

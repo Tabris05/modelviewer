@@ -28,14 +28,6 @@ void FrameBuffer::detachTexture(GLenum attachment, int mip) {
 	glNamedFramebufferTexture(m_id, attachment, 0, mip);
 }
 
-void FrameBuffer::attachRenderBuffer(const RenderBuffer& renderBuffer, GLenum attachment) {
-	glNamedFramebufferRenderbuffer(m_id, attachment, GL_RENDERBUFFER, renderBuffer.id());
-}
-
-void FrameBuffer::detachRenderBuffer(GLenum attachment) {
-	glNamedFramebufferRenderbuffer(m_id, attachment, GL_RENDERBUFFER, 0);
-}
-
 void FrameBuffer::blitTo(FrameBuffer& dst, GLenum mask, int x, int y) {
 	glBlitNamedFramebuffer(m_id, dst.id(), 0, 0, x, y, 0, 0, x, y, mask, GL_NEAREST);
 }

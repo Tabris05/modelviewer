@@ -13,7 +13,6 @@
 #include "texture.h"
 #include "skybox.h"
 #include "framebuffer.h"
-#include "renderbuffer.h"
 #include "computeshader.h"
 
 class Renderer {
@@ -45,14 +44,15 @@ class Renderer {
 			Shader depthShader,
 			Shader shadowShader,
 			Shader skyboxShader,
+			ComputeShader resolveShader,
 			Shader bloomDownsampleShader,
 			Shader bloomUpsampleShader,
 			ComputeShader postprocessingShader,
 			FrameBuffer shadowmapBuffer,
 			FrameBuffer multisampledBuffer,
 			FrameBuffer postprocessingBuffer,
-			RenderBuffer multisampledColorTarget,
-			RenderBuffer multisampledDepthTarget,
+			Texture multisampledColorTarget,
+			Texture multisampledDepthTarget,
 			Texture brdfLUT,
 			Texture bloomTarget,
 			Texture shadowmapTarget,
@@ -69,14 +69,15 @@ class Renderer {
 		Shader m_depthShader;
 		Shader m_shadowShader;
 		Shader m_skyboxShader;
+		ComputeShader m_resolveShader;
 		Shader m_bloomDownsampleShader;
 		Shader m_bloomUpsampleShader;
 		ComputeShader m_postprocessingShader;
 		FrameBuffer m_shadowmapBuffer;
 		FrameBuffer m_multisampledBuffer;
 		FrameBuffer m_postprocessingBuffer;
-		RenderBuffer m_multisampledColorTarget;
-		RenderBuffer m_multisampledDepthTarget;
+		Texture m_multisampledColorTarget;
+		Texture m_multisampledDepthTarget;
 		Texture m_brdfLUT;
 		Texture m_bloomTarget;
 		Texture m_shadowmapTarget;
