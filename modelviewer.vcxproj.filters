@@ -200,5 +200,8 @@
     <None Include="shaders\shadow.vert" />
     <None Include="shaders\bloomdownsample.frag" />
     <None Include="shaders\bloomupsample.frag" />
+    <None Include="shaders\postprocessing.comp">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -40,6 +40,10 @@ void FrameBuffer::blitTo(FrameBuffer& dst, GLenum mask, int x, int y) {
 	glBlitNamedFramebuffer(m_id, dst.id(), 0, 0, x, y, 0, 0, x, y, mask, GL_NEAREST);
 }
 
+void FrameBuffer::blitToDefault(GLenum mask, int x, int y) {
+	glBlitNamedFramebuffer(m_id, 0, 0, 0, x, y, 0, 0, x, y, mask, GL_NEAREST);
+}
+
 FrameBuffer FrameBuffer::make() {
 	GLuint id;
 	glCreateFramebuffers(1, &id);

@@ -18,5 +18,6 @@ A toy 3D model viewer I wrote to teach myself the fundamentals of realtime graph
 - **[GLM](https://github.com/g-truc/glm)** - CPU-side linear algebra computations
 - **[STB](https://github.com/nothings/stb)** - Image loading
 - **[fastgltf](https://github.com/spnda/fastgltf)** - 3D model loading
+- **[MikkTSpace](https://github.com/mmikk/MikkTSpace)** - Calculate vertex tangent vectors
 - **[Dear ImGui](https://github.com/ocornut/imgui)** - GUI elements
 - **[imGuIZMO.quat](https://github.com/BrutPitt/imGuIZMO.quat)** - Rotational GUI elements

@@ -246,7 +246,8 @@ Model Model::make(const std::filesystem::path& path) {
 						vertices[index + oldVerticesSize].m_tangentSign = tangent.w;
 					});
 				}
-				else if (uvAccessorIndex != curPrimitive.attributes.cend()) { // calculate tangents if they are not provided and we are able to
+				// if we are not given tangents but have uvs (and normals) then we can calculate them
+				else if (uvAccessorIndex != curPrimitive.attributes.cend()) {
 					struct UsrPtr {
 						size_t vertexOffset;
 						size_t indexOffset;

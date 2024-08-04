@@ -206,6 +206,7 @@
     <None Include="shaders\cubemap.vert" />
     <None Include="shaders\model.frag" />
     <None Include="shaders\model.vert" />
+    <None Include="shaders\postprocessing.comp" />
     <None Include="shaders\postprocessing.frag" />
     <None Include="shaders\screentri.vert" />
     <None Include="shaders\depth.frag" />

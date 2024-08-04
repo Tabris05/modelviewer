@@ -13,6 +13,11 @@
 // 0 - materials
 // 1 - shadow map noise
 
+// Images:
+// 0 - BRDF LUT (initialization) / Postprocessing Frame Buffer (runtime)
+// 1 - Bloom src / Skybox src
+// 2 - Bloom dst / Skybox dst
+
 void Renderer::run() {
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
@@ -90,7 +95,7 @@ Renderer Renderer::make() {
 	Shader skyboxShader = Shader::make("shaders/cubemap.vert", "shaders/cubemap.frag");
 	Shader bloomDownsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomdownsample.frag");
 	Shader bloomUpsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomupsample.frag");
-	Shader postprocessingShader = Shader::make("shaders/screentri.vert", "shaders/postprocessing.frag");
+	ComputeShader postprocessingShader = ComputeShader::make("shaders/postprocessing.comp");
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
 	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT32);
@@ -106,7 +111,6 @@ Renderer Renderer::make() {
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
 	Texture postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	postprocessingShader.setUniform("inputTex", postprocessingTarget.handle());
 
 	Texture brdfLUT = Texture::make2D(m_brdfLUTSize, m_brdfLUTSize, GL_RG16F, nullptr, GL_RG, GL_FLOAT, GL_LINEAR, GL_LINEAR);
 	modelShader.setUniform("brdfLUTex", brdfLUT.handle());
@@ -115,6 +119,7 @@ Renderer Renderer::make() {
 	brdfIntegral.bind();
 	brdfLUT.bindForCompute(0, GL_WRITE_ONLY);
 	brdfIntegral.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_brdfLUTSize, m_brdfLUTSize);
+	postprocessingTarget.bindForCompute(0, GL_READ_WRITE);
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
@@ -227,6 +232,7 @@ void Renderer::draw() {
 	// bloom pass
 	m_postprocessingBuffer.blitTo(m_bloomFrameBuffers.front(), GL_COLOR_BUFFER_BIT, m_width, m_height);
 
+	m_multisampledBuffer.unbind();
 	if (m_bloomEnabled) {
 		m_bloomDownsampleShader.bind();
 		for (int i = 1; i < m_bloomFrameBuffers.size(); i++) {
@@ -248,15 +254,13 @@ void Renderer::draw() {
 		glDisable(GL_BLEND);
 		m_bloomFrameBuffers.front().unbind();
 	}
-	else {
-		m_multisampledBuffer.unbind();
-	}
 
 	// post processing pass
 	glViewport(0, 0, m_width, m_height);
 	m_postprocessingShader.bind();
 	m_postprocessingShader.setUniform("gamma", m_gamma);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	m_postprocessingShader.dispatch(GL_FRAMEBUFFER_BARRIER_BIT, m_width, m_height);
+	m_postprocessingBuffer.blitToDefault(GL_COLOR_BUFFER_BIT, m_width, m_height);
 
 	// UI pass
 	ImGui_ImplOpenGL3_NewFrame();
@@ -351,8 +355,8 @@ void Renderer::resizeWindow(int width, int height) {
 	m_height = height;
 	m_camera.updateSize(width, height);
 	m_postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
+	m_postprocessingTarget.bindForCompute(0, GL_READ_WRITE);
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	m_postprocessingShader.setUniform("inputTex", m_postprocessingTarget.handle());
 	m_multisampledColorTarget = RenderBuffer::makeMultisampled(width, height, GL_R11F_G11F_B10F);
 	m_multisampledDepthTarget = RenderBuffer::makeMultisampled(width, height, GL_DEPTH_COMPONENT);
 	m_multisampledBuffer.attachRenderBuffer(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
@@ -432,7 +436,7 @@ Renderer::Renderer(
 	Shader skyboxShader,
 	Shader bloomDownsampleShader,
 	Shader bloomUpsampleShader,
-	Shader postprocessingShader,
+	ComputeShader postprocessingShader,
 	FrameBuffer shadowmapBuffer,
 	FrameBuffer multisampledBuffer,
 	FrameBuffer postprocessingBuffer,

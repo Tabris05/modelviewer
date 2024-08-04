@@ -1,9 +1,10 @@
 #include "computeshader.h"
 #include "dbg.h"
+#include <glm/gtc/type_ptr.hpp>
 
 void ComputeShader::dispatch(GLenum barrierBits, GLuint xDim, GLuint yDim, GLuint zDim) {
-	// for now, assume local group size of 8 for x and y and 1 for z
-	glDispatchCompute((xDim + 7 / 8), (yDim + 7 / 8), zDim );
+	glm::ivec3 invocations = (glm::ivec3(xDim, yDim, zDim) + m_workgroupSize - 1) / m_workgroupSize;
+	glDispatchCompute(invocations.x, invocations.y, invocations.z);
 	glMemoryBarrier(barrierBits);
 }
 
@@ -28,7 +29,10 @@ ComputeShader ComputeShader::make(const char* csPath) {
 	glDetachShader(id, csID);
 	glDeleteShader(csID);
 
-	return ComputeShader{ id };
+	glm::ivec3 workgroupSize;
+	glGetProgramiv(id, GL_COMPUTE_WORK_GROUP_SIZE, glm::value_ptr(workgroupSize));
+
+	return ComputeShader{ id, workgroupSize };
 }
 
-ComputeShader::ComputeShader(GLuint id) : Shader(id) {}
+ComputeShader::ComputeShader(GLuint id, glm::ivec3 workgroupSize) : Shader(id), m_workgroupSize{ workgroupSize } {}

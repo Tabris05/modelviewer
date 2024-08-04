@@ -47,7 +47,7 @@ class Renderer {
 			Shader skyboxShader,
 			Shader bloomDownsampleShader,
 			Shader bloomUpsampleShader,
-			Shader postprocessingShader,
+			ComputeShader postprocessingShader,
 			FrameBuffer shadowmapBuffer,
 			FrameBuffer multisampledBuffer,
 			FrameBuffer postprocessingBuffer,
@@ -71,7 +71,7 @@ class Renderer {
 		Shader m_skyboxShader;
 		Shader m_bloomDownsampleShader;
 		Shader m_bloomUpsampleShader;
-		Shader m_postprocessingShader;
+		ComputeShader m_postprocessingShader;
 		FrameBuffer m_shadowmapBuffer;
 		FrameBuffer m_multisampledBuffer;
 		FrameBuffer m_postprocessingBuffer;

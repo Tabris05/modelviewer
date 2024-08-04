@@ -10,7 +10,9 @@ class ComputeShader : public Shader {
 		static ComputeShader make(const char* csPath);
 
 	private:
-		ComputeShader(GLuint id);
+		ComputeShader(GLuint id, glm::ivec3 workgroupSize);
+
+		glm::ivec3 m_workgroupSize;
 };
 
 #endif

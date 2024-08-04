@@ -16,6 +16,7 @@ class FrameBuffer {
 		void attachRenderBuffer(const RenderBuffer& renderBuffer, GLenum attachment);
 		void detachRenderBuffer(GLenum attachment);
 		void blitTo(FrameBuffer& dst, GLenum mask, int x, int y);
+		void blitToDefault(GLenum mask, int x, int y);
 	
 		static FrameBuffer make();
 		FrameBuffer(const FrameBuffer& src) = default;

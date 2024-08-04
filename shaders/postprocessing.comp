@@ -1,0 +1,32 @@
+#version 460 core
+#extension GL_ARB_bindless_texture : require
+
+uniform float gamma;
+
+layout(bindless_sampler) uniform sampler2D bloomTex;
+
+layout(r11f_g11f_b10f, binding = 0) restrict uniform image2D frameBuffer;
+
+vec3 toneMap(vec3 inputColor, float exposure2) {
+	float oldLuminance = dot(inputColor, vec3(0.2126f, 0.7152f, 0.0722f));
+	float newLuminance = oldLuminance * (1.0f + oldLuminance / exposure2) / (1.0f + oldLuminance);
+	return inputColor * (newLuminance / oldLuminance);
+}
+
+vec3 gammaCorrect(vec3 inputColor) {
+	return pow(inputColor, vec3(1.0f / gamma));
+}
+
+layout (local_size_x = 8, local_size_y = 8) in;
+void main() {
+	ivec2 dimensions = imageSize(frameBuffer);
+	if(gl_GlobalInvocationID.x > dimensions.x || gl_GlobalInvocationID.y > dimensions.y) {
+		return;
+	}
+	vec2 uv = (vec2(gl_GlobalInvocationID.xy) + vec2(0.5f)) / dimensions;
+
+	vec3 color = mix(imageLoad(frameBuffer, ivec2(gl_GlobalInvocationID.xy)).rgb, textureLod(bloomTex, uv, 0).rgb, 0.04f);
+	color = toneMap(color, 25.0f);
+	color = gammaCorrect(color);
+	imageStore(frameBuffer, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0f));
+}
