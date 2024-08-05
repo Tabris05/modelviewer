@@ -23,10 +23,6 @@ vec3 gammaCorrect(vec3 inputColor) {
 layout (local_size_x = 8, local_size_y = 8) in;
 void main() {
 	ivec2 dimensions = imageSize(frameBuffer);
-	if(gl_GlobalInvocationID.x > dimensions.x || gl_GlobalInvocationID.y > dimensions.y) {
-		return;
-	}
-
 	vec2 uv = (vec2(gl_GlobalInvocationID.xy) + vec2(0.5f)) / dimensions;
 	vec3 color = mix(imageLoad(frameBuffer, ivec2(gl_GlobalInvocationID.xy)).rgb, textureLod(bloomTex, uv, 0).rgb, 0.04f);
 

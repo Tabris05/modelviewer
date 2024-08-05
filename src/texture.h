@@ -9,7 +9,7 @@ class Texture {
 		GLuint id() const;
 		GLuint64 handle() const;
 
-		void bindForCompute(GLuint binding, GLenum access) const;
+		void bindImage(GLuint binding, GLenum access, GLint mip = 0) const;
 
 		static Texture make2D(
 			int width,

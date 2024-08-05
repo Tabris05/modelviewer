@@ -42,10 +42,6 @@ float geometrySmith(vec3 normal, vec3 viewDir, vec3 lightDir, float roughness) {
 layout (local_size_x = 8, local_size_y = 8) in;
 void main() {
 	ivec2 dimensions = imageSize(brdfLUTex);
-	if(gl_GlobalInvocationID.x > dimensions.x || gl_GlobalInvocationID.y > dimensions.y) {
-		return;
-	}
-
 	vec2 uv = (vec2(gl_GlobalInvocationID.xy) + vec2(0.5f)) / dimensions;
 	const uint sampleCount = 1024u;
 	vec3 V = vec3(1.0f - uv.x * uv.x, 0.0f, uv.x);

@@ -16,8 +16,7 @@
 // Images:
 // 0 - BRDF LUT (initialization) / Multisampled Frame Buffer (runtime)
 // 1 - Postprocessing Frame Buffer
-// 2 - Bloom src / Skybox src
-// 3 - Bloom dst / Skybox dst
+// 2 - Bloom dst / Skybox dst
 
 void Renderer::run() {
 	while (!glfwWindowShouldClose(m_window)) {
@@ -77,8 +76,6 @@ Renderer Renderer::make() {
 	glDepthFunc(GL_GEQUAL); // reverse z
 	glClearDepth(0.0f);
 	glCullFace(GL_BACK);
-	glBlendFunc(GL_ONE, GL_ONE);
-	glBlendEquation(GL_FUNC_ADD);
 
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -95,10 +92,9 @@ Renderer Renderer::make() {
 	Shader shadowShader = Shader::make("shaders/shadow.vert", "shaders/depth.frag");
 	Shader skyboxShader = Shader::make("shaders/cubemap.vert", "shaders/cubemap.frag");
 	ComputeShader resolveShader = ComputeShader::make("shaders/multisampleresolve.comp");
-	Shader bloomDownsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomdownsample.frag");
-	Shader bloomUpsampleShader = Shader::make("shaders/screentri.vert", "shaders/bloomupsample.frag");
+	ComputeShader bloomDownsampleShader = ComputeShader::make("shaders/bloomdownsample.comp");
+	ComputeShader bloomUpsampleShader = ComputeShader::make("shaders/bloomupsample.comp");
 	ComputeShader postprocessingShader = ComputeShader::make("shaders/postprocessing.comp");
-
 
 	FrameBuffer shadowmapBuffer = FrameBuffer::make();
 	Texture shadowmapTarget = Texture::make2D(m_shadowmapResolution, m_shadowmapResolution, GL_DEPTH_COMPONENT32);
@@ -114,34 +110,22 @@ Renderer Renderer::make() {
 	FrameBuffer postprocessingBuffer = FrameBuffer::make();
 	Texture postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
 	postprocessingBuffer.attachTexture(postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	postprocessingTarget.bindForCompute(1, GL_READ_WRITE);
+	postprocessingTarget.bindImage(1, GL_READ_WRITE);
 
 	Texture brdfLUT = Texture::make2D(m_brdfLUTSize, m_brdfLUTSize, GL_RG16F, nullptr, GL_RG, GL_FLOAT, GL_LINEAR, GL_LINEAR);
 	modelShader.setUniform("brdfLUTex", brdfLUT.handle());
 
 	ComputeShader brdfIntegral = ComputeShader::make("shaders/brdfintegral.comp");
 	brdfIntegral.bind();
-	brdfLUT.bindForCompute(0, GL_WRITE_ONLY);
+	brdfLUT.bindImage(0, GL_WRITE_ONLY);
 	brdfIntegral.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_brdfLUTSize, m_brdfLUTSize);
-	multisampledColorTarget.bindForCompute(0, GL_READ_ONLY);
+	multisampledColorTarget.bindImage(0, GL_READ_ONLY);
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
 
-	int bufferWidth = width;
-	int bufferHeight = height;
-	size_t numMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
+	size_t numBloomMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
 	Texture bloomTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
-	std::vector<FrameBuffer> bloomFrameBuffers;
-	std::vector<glm::ivec2> bloomBufferSizes;
-	for (size_t i = 0; i < numMips; i++) {
-		FrameBuffer curMip = FrameBuffer::make();
-		curMip.attachTexture(bloomTarget, GL_COLOR_ATTACHMENT0, i);
-		bloomFrameBuffers.emplace_back(curMip);
-		bloomBufferSizes.emplace_back(bufferWidth, bufferHeight);
-		bufferWidth /= 2;
-		bufferHeight /= 2;
-	}
 	bloomDownsampleShader.setUniform("inputTex", bloomTarget.handle());
 	bloomUpsampleShader.setUniform("inputTex", bloomTarget.handle());
 	postprocessingShader.setUniform("bloomTex", bloomTarget.handle());
@@ -171,8 +155,7 @@ Renderer Renderer::make() {
 		std::move(shadowmapTarget),
 		std::move(postprocessingTarget),
 		std::move(poissonDisks),
-		std::move(bloomFrameBuffers),
-		std::move(bloomBufferSizes)
+		std::move(numBloomMips)
 	};
 }
 
@@ -231,36 +214,29 @@ void Renderer::draw() {
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glTextureBarrier();
 
-	// resolve pass (MSAA only works well in ldr color space, so we do a custom resolve that tonemaps each sample and then combines them
-	// we then inverse tonemap the result since the bloom buffer needs to be composited in hdr color space)
+	// resolve pass
+	// MSAA only works well in ldr color space, so we do a custom resolve that tonemaps each sample and then combines them
+	// we then inverse tonemap the result since the bloom buffer needs to be composited in hdr color space
+	// this shader also resolves into mip 0 of the bloom buffer, but does not tonemap/inverse tonemap since any aliasing will be resolved by the blurring
+	m_bloomTarget.bindImage(2, GL_WRITE_ONLY);
 	m_resolveShader.bind();
 	m_resolveShader.dispatch(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT, m_width, m_height);
 
-	// bloom pass (we can hardware resolve here since any aliasing will be resolved by the blurring
-	// and this texture does not contribute strongly to the final output anyways)
-	m_multisampledBuffer.blitTo(m_bloomFrameBuffers.front(), GL_COLOR_BUFFER_BIT, m_width, m_height);
-
+	// bloom pass
 	m_multisampledBuffer.unbind();
 	if (m_bloomEnabled) {
 		m_bloomDownsampleShader.bind();
-		for (int i = 1; i < m_bloomFrameBuffers.size(); i++) {
-			glViewport(0, 0, m_bloomBufferSizes[i].x, m_bloomBufferSizes[i].y);
-			m_bloomFrameBuffers[i].bind();
+		for (int i = 1; i < m_numBloomMips; i++) {
+			m_bloomTarget.bindImage(2, GL_WRITE_ONLY, i);
 			m_bloomDownsampleShader.setUniform("inputMip", i - 1);
-			glDrawArrays(GL_TRIANGLES, 0, 3);
-			glTextureBarrier();
+			m_bloomDownsampleShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_width, m_height);
 		}
-		glEnable(GL_BLEND);
 		m_bloomUpsampleShader.bind();
-		for (int i = m_bloomFrameBuffers.size() - 1; i >= 1; i--) {
-			glViewport(0, 0, m_bloomBufferSizes[i - 1].x, m_bloomBufferSizes[i - 1].y);
-			m_bloomFrameBuffers[i - 1].bind();
+		for (int i = m_numBloomMips - 1; i >= 1; i--) {
+			m_bloomTarget.bindImage(2, GL_READ_WRITE, i - 1);
 			m_bloomUpsampleShader.setUniform("inputMip", i);
-			glDrawArrays(GL_TRIANGLES, 0, 3);
-			glTextureBarrier();
+			m_bloomUpsampleShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_width, m_height);
 		}
-		glDisable(GL_BLEND);
-		m_bloomFrameBuffers.front().unbind();
 	}
 
 	// post processing pass
@@ -366,26 +342,13 @@ void Renderer::resizeWindow(int width, int height) {
 	m_multisampledDepthTarget = Texture::make2DMultisampled(width, height, GL_DEPTH_COMPONENT32);
 	m_multisampledBuffer.attachTexture(m_multisampledColorTarget, GL_COLOR_ATTACHMENT0);
 	m_multisampledBuffer.attachTexture(m_multisampledDepthTarget, GL_DEPTH_ATTACHMENT);
-	m_multisampledColorTarget.bindForCompute(0, GL_READ_ONLY);
+	m_multisampledColorTarget.bindImage(0, GL_READ_ONLY);
 	m_postprocessingTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F);
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
-	m_postprocessingTarget.bindForCompute(1, GL_READ_WRITE);
+	m_postprocessingTarget.bindImage(1, GL_READ_WRITE);
 
-
-	int bufferWidth = width;
-	int bufferHeight = height;
-	size_t numMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
+	m_numBloomMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
 	m_bloomTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
-	m_bloomFrameBuffers.clear();
-	m_bloomBufferSizes.clear();
-	for (size_t i = 0; i < numMips; i++) {
-		FrameBuffer curMip = FrameBuffer::make();
-		curMip.attachTexture(m_bloomTarget, GL_COLOR_ATTACHMENT0, i);
-		m_bloomFrameBuffers.emplace_back(curMip);
-		m_bloomBufferSizes.emplace_back(bufferWidth, bufferHeight);
-		bufferWidth /= 2;
-		bufferHeight /= 2;
-	}
 	m_bloomDownsampleShader.setUniform("inputTex", m_bloomTarget.handle());
 	m_bloomUpsampleShader.setUniform("inputTex", m_bloomTarget.handle());
 	m_postprocessingShader.setUniform("bloomTex", m_bloomTarget.handle());
@@ -445,8 +408,8 @@ Renderer::Renderer(
 	Shader shadowShader,
 	Shader skyboxShader,
 	ComputeShader resolveShader,
-	Shader bloomDownsampleShader,
-	Shader bloomUpsampleShader,
+	ComputeShader bloomDownsampleShader,
+	ComputeShader bloomUpsampleShader,
 	ComputeShader postprocessingShader,
 	FrameBuffer shadowmapBuffer,
 	FrameBuffer multisampledBuffer,
@@ -458,8 +421,7 @@ Renderer::Renderer(
 	Texture shadowmapTarget,
 	Texture postprocessingTarget,
 	ShaderStorageBuffer poissonDisks,
-	std::vector<FrameBuffer> bloomFrameBuffers,
-	std::vector<glm::ivec2> bloomBufferSizes
+	size_t numBloomMips
 ) :
 	m_window{ window },
 	m_width{ width },
@@ -485,8 +447,7 @@ Renderer::Renderer(
 	m_shadowmapTarget{ std::move(shadowmapTarget) },
 	m_postprocessingTarget{ std::move(postprocessingTarget) },
 	m_poissonDisks{ std::move(poissonDisks) },
-	m_bloomFrameBuffers{ std::move(bloomFrameBuffers) },
-	m_bloomBufferSizes{ std::move(bloomBufferSizes) } {
+	m_numBloomMips{ numBloomMips } {
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(m_window, [] (GLFWwindow* window, int x, int y) { static_cast<Renderer*>(glfwGetWindowUserPointer(window))->resizeWindow(x, y); });
 }

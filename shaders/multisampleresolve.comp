@@ -2,8 +2,9 @@
 
 #define EPSILON 0.000001f
 
-layout(r11f_g11f_b10f, binding = 0) restrict readonly uniform image2DMS src;
-layout(r11f_g11f_b10f, binding = 1) restrict writeonly uniform image2D dst;
+layout(r11f_g11f_b10f, binding = 0) restrict readonly uniform image2DMS multisampledFrameBuffer;
+layout(r11f_g11f_b10f, binding = 1) restrict writeonly uniform image2D frameBuffer;
+layout(r11f_g11f_b10f, binding = 2) restrict writeonly uniform image2D bloomBuffer;
 
 vec3 toneMap(vec3 inputColor) {
 	const float exposure2 = 25.0f;
@@ -21,16 +22,20 @@ vec3 invToneMap(vec3 inputColor) {
 
 layout (local_size_x = 8, local_size_y = 8) in;
 void main() {
-	ivec2 dimensions = imageSize(dst);
+	ivec2 dimensions = imageSize(frameBuffer);
 	if(gl_GlobalInvocationID.x > dimensions.x || gl_GlobalInvocationID.y > dimensions.y) {
 		return;
 	}
 
-	int numSamples = imageSamples(src);
-	vec3 color = vec3(0.0f, 0.0f, 0.0f);
+	int numSamples = imageSamples(multisampledFrameBuffer);
+	vec3 ldrCol = vec3(0.0f, 0.0f, 0.0f);
+	vec3 hdrCol = vec3(0.0f, 0.0f, 0.0f);
 	for(int i = 0; i < numSamples; i++) {
-		color += toneMap(imageLoad(src, ivec2(gl_GlobalInvocationID.xy), i).rgb);
+		vec3 curCol = imageLoad(multisampledFrameBuffer, ivec2(gl_GlobalInvocationID.xy), i).rgb;
+		ldrCol += toneMap(curCol);
+		hdrCol += curCol;
 	}
 
-	imageStore(dst, ivec2(gl_GlobalInvocationID.xy), vec4(invToneMap(color / numSamples), 1.0f));
+	imageStore(frameBuffer, ivec2(gl_GlobalInvocationID.xy), vec4(invToneMap(ldrCol / numSamples), 1.0f));
+	imageStore(bloomBuffer, ivec2(gl_GlobalInvocationID.xy), vec4(hdrCol / numSamples, 1.0f));
 }

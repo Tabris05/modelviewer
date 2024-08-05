@@ -172,9 +172,6 @@
     <None Include="shaders\model.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="shaders\screentri.vert">
-      <Filter>Resource Files\Shaders</Filter>
-    </None>
     <None Include="shaders\depth.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
@@ -189,11 +186,11 @@
     <None Include="shaders\skyboxprefilter.frag" />
     <None Include="shaders\brdfintegral.comp" />
     <None Include="shaders\shadow.vert" />
-    <None Include="shaders\bloomdownsample.frag" />
-    <None Include="shaders\bloomupsample.frag" />
     <None Include="shaders\postprocessing.comp">
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="shaders\multisampleresolve.comp" />
+    <None Include="shaders\bloomdownsample.comp" />
+    <None Include="shaders\bloomupsample.comp" />
   </ItemGroup>
 </Project>

@@ -45,8 +45,8 @@ class Renderer {
 			Shader shadowShader,
 			Shader skyboxShader,
 			ComputeShader resolveShader,
-			Shader bloomDownsampleShader,
-			Shader bloomUpsampleShader,
+			ComputeShader bloomDownsampleShader,
+			ComputeShader bloomUpsampleShader,
 			ComputeShader postprocessingShader,
 			FrameBuffer shadowmapBuffer,
 			FrameBuffer multisampledBuffer,
@@ -58,8 +58,7 @@ class Renderer {
 			Texture shadowmapTarget,
 			Texture postprocessingTarget,
 			ShaderStorageBuffer poissonDisks,
-			std::vector<FrameBuffer> bloomFrameBuffers,
-			std::vector<glm::ivec2> bloomBufferSizes
+			size_t numBloomMips
 		);
 		
 		Model m_model;
@@ -70,8 +69,8 @@ class Renderer {
 		Shader m_shadowShader;
 		Shader m_skyboxShader;
 		ComputeShader m_resolveShader;
-		Shader m_bloomDownsampleShader;
-		Shader m_bloomUpsampleShader;
+		ComputeShader m_bloomDownsampleShader;
+		ComputeShader m_bloomUpsampleShader;
 		ComputeShader m_postprocessingShader;
 		FrameBuffer m_shadowmapBuffer;
 		FrameBuffer m_multisampledBuffer;
@@ -85,9 +84,7 @@ class Renderer {
 		ShaderStorageBuffer m_poissonDisks;
 		GLFWwindow* m_window;
 
-		std::vector<FrameBuffer> m_bloomFrameBuffers;
-		std::vector<glm::ivec2> m_bloomBufferSizes;
-
+		size_t m_numBloomMips;
 		int m_width, m_height;
 		double m_curFrame = 0.0, m_lastFrame = 0.0;
 

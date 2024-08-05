@@ -197,8 +197,8 @@
     <ClInclude Include="src\vertexbuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\bloomdownsample.frag" />
-    <None Include="shaders\bloomupsample.frag" />
+    <None Include="shaders\bloomdownsample.comp" />
+    <None Include="shaders\bloomupsample.comp" />
     <None Include="shaders\brdfintegral.comp" />
     <None Include="shaders\cubemap.frag" />
     <None Include="shaders\cubemap.vert" />
@@ -206,7 +206,6 @@
     <None Include="shaders\model.vert" />
     <None Include="shaders\multisampleresolve.comp" />
     <None Include="shaders\postprocessing.comp" />
-    <None Include="shaders\screentri.vert" />
     <None Include="shaders\depth.frag" />
     <None Include="shaders\depth.vert" />
     <None Include="shaders\shadow.vert" />
