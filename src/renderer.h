@@ -58,7 +58,7 @@ class Renderer {
 			Texture shadowmapTarget,
 			Texture postprocessingTarget,
 			ShaderStorageBuffer poissonDisks,
-			size_t numBloomMips
+			std::vector<glm::ivec2> bloomMipSizes
 		);
 		
 		Model m_model;
@@ -84,7 +84,8 @@ class Renderer {
 		ShaderStorageBuffer m_poissonDisks;
 		GLFWwindow* m_window;
 
-		size_t m_numBloomMips;
+		std::vector<glm::ivec2> m_bloomMipSizes;
+
 		int m_width, m_height;
 		double m_curFrame = 0.0, m_lastFrame = 0.0;
 

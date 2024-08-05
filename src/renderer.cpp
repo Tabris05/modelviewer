@@ -123,12 +123,20 @@ Renderer Renderer::make() {
 
 	ShaderStorageBuffer poissonDisks = makeShadowmapNoise(m_poissonDiskWindowSize, m_poissonDiskFilterSize);
 	poissonDisks.bind(1);
-
+	
+	int bufferWidth = width;
+	int bufferHeight = height;
 	size_t numBloomMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
 	Texture bloomTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 	bloomDownsampleShader.setUniform("inputTex", bloomTarget.handle());
 	bloomUpsampleShader.setUniform("inputTex", bloomTarget.handle());
 	postprocessingShader.setUniform("bloomTex", bloomTarget.handle());
+	std::vector<glm::ivec2> bloomMipSizes;
+	for (size_t i = 0; i < numBloomMips; i++) {
+		bloomMipSizes.emplace_back(bufferWidth, bufferHeight);
+		bufferWidth /= 2;
+		bufferHeight /= 2;
+	}
 
 	return Renderer { 
 		window,
@@ -155,7 +163,7 @@ Renderer Renderer::make() {
 		std::move(shadowmapTarget),
 		std::move(postprocessingTarget),
 		std::move(poissonDisks),
-		std::move(numBloomMips)
+		std::move(bloomMipSizes)
 	};
 }
 
@@ -226,16 +234,16 @@ void Renderer::draw() {
 	m_multisampledBuffer.unbind();
 	if (m_bloomEnabled) {
 		m_bloomDownsampleShader.bind();
-		for (int i = 1; i < m_numBloomMips; i++) {
+		for (int i = 1; i < m_bloomMipSizes.size(); i++) {
 			m_bloomTarget.bindImage(2, GL_WRITE_ONLY, i);
 			m_bloomDownsampleShader.setUniform("inputMip", i - 1);
-			m_bloomDownsampleShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_width, m_height);
+			m_bloomDownsampleShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_bloomMipSizes[i].x, m_bloomMipSizes[i].y);
 		}
 		m_bloomUpsampleShader.bind();
-		for (int i = m_numBloomMips - 1; i >= 1; i--) {
+		for (int i = m_bloomMipSizes.size() - 1; i >= 1; i--) {
 			m_bloomTarget.bindImage(2, GL_READ_WRITE, i - 1);
 			m_bloomUpsampleShader.setUniform("inputMip", i);
-			m_bloomUpsampleShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_width, m_height);
+			m_bloomUpsampleShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, m_bloomMipSizes[i - 1].x, m_bloomMipSizes[i - 1].y);
 		}
 	}
 
@@ -347,11 +355,19 @@ void Renderer::resizeWindow(int width, int height) {
 	m_postprocessingBuffer.attachTexture(m_postprocessingTarget, GL_COLOR_ATTACHMENT0);
 	m_postprocessingTarget.bindImage(1, GL_READ_WRITE);
 
-	m_numBloomMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
+	int bufferWidth = width;
+	int bufferHeight = height;
+	size_t numBloomMips = std::min<size_t>(m_bloomDepth, std::floor(std::log2(std::max(width, height))) + 1);
 	m_bloomTarget = Texture::make2D(width, height, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 	m_bloomDownsampleShader.setUniform("inputTex", m_bloomTarget.handle());
 	m_bloomUpsampleShader.setUniform("inputTex", m_bloomTarget.handle());
 	m_postprocessingShader.setUniform("bloomTex", m_bloomTarget.handle());
+	m_bloomMipSizes.clear();
+	for (size_t i = 0; i < numBloomMips; i++) {
+		m_bloomMipSizes.emplace_back(bufferWidth, bufferHeight);
+		bufferWidth /= 2;
+		bufferHeight /= 2;
+	}
 
 	glViewport(0, 0, width, height);
 	draw();
@@ -421,7 +437,7 @@ Renderer::Renderer(
 	Texture shadowmapTarget,
 	Texture postprocessingTarget,
 	ShaderStorageBuffer poissonDisks,
-	size_t numBloomMips
+	std::vector<glm::ivec2> bloomMipSizes
 ) :
 	m_window{ window },
 	m_width{ width },
@@ -447,7 +463,7 @@ Renderer::Renderer(
 	m_shadowmapTarget{ std::move(shadowmapTarget) },
 	m_postprocessingTarget{ std::move(postprocessingTarget) },
 	m_poissonDisks{ std::move(poissonDisks) },
-	m_numBloomMips{ numBloomMips } {
+	m_bloomMipSizes{ std::move(bloomMipSizes) } {
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(m_window, [] (GLFWwindow* window, int x, int y) { static_cast<Renderer*>(glfwGetWindowUserPointer(window))->resizeWindow(x, y); });
 }
