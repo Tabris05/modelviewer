@@ -33,9 +33,6 @@
     <ClCompile Include="include\imgui\imgui.cpp">
       <Filter>Source Files\Dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="include\imgui\imgui_demo.cpp">
-      <Filter>Source Files\Dependencies</Filter>
-    </ClCompile>
     <ClCompile Include="include\imgui\imgui_draw.cpp">
       <Filter>Source Files\Dependencies</Filter>
     </ClCompile>
@@ -179,11 +176,7 @@
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="shaders\cubemap.vert" />
-    <None Include="shaders\skyboxconversion.frag" />
     <None Include="shaders\cubemap.frag" />
-    <None Include="shaders\skyboxpreprocess.vert" />
-    <None Include="shaders\skyboxconvolution.frag" />
-    <None Include="shaders\skyboxprefilter.frag" />
     <None Include="shaders\brdfintegral.comp" />
     <None Include="shaders\shadow.vert" />
     <None Include="shaders\postprocessing.comp">
@@ -192,5 +185,8 @@
     <None Include="shaders\multisampleresolve.comp" />
     <None Include="shaders\bloomdownsample.comp" />
     <None Include="shaders\bloomupsample.comp" />
+    <None Include="shaders\skyboxconversion.comp" />
+    <None Include="shaders\skyboxconvolution.comp" />
+    <None Include="shaders\skyboxprefilter.comp" />
   </ItemGroup>
 </Project>

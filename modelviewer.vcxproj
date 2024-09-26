@@ -148,7 +148,6 @@
   <ItemGroup>
     <ClCompile Include="include\imGuIZMOquat\imGuIZMOquat.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />
-    <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
     <ClCompile Include="include\imgui\imgui_impl_glfw.cpp" />
     <ClCompile Include="include\imgui\imgui_impl_opengl3.cpp" />
@@ -209,10 +208,9 @@
     <None Include="shaders\depth.frag" />
     <None Include="shaders\depth.vert" />
     <None Include="shaders\shadow.vert" />
-    <None Include="shaders\skyboxconversion.frag" />
-    <None Include="shaders\skyboxconvolution.frag" />
-    <None Include="shaders\skyboxprefilter.frag" />
-    <None Include="shaders\skyboxpreprocess.vert" />
+    <None Include="shaders\skyboxconversion.comp" />
+    <None Include="shaders\skyboxconvolution.comp" />
+    <None Include="shaders\skyboxprefilter.comp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

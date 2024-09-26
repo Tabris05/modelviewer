@@ -1,0 +1,48 @@
+#version 460 core
+#extension GL_ARB_bindless_texture : require
+
+#define PI 3.141593f
+
+layout(bindless_sampler) uniform samplerCube skyboxTex;
+
+layout(r11f_g11f_b10f, binding = 2) restrict writeonly uniform imageCube outputTex;
+
+float countMips(ivec2 dimensions) {
+    return floor(log2(max(dimensions.x, dimensions.y))) + 1.0f;
+}
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main() {
+    vec3 pos = 2.0f * vec3(gl_GlobalInvocationID.xy / vec2(imageSize(outputTex)), 1.0f) - 1.0f;
+	vec3 faces[6] = {
+		vec3( pos.z, -pos.y, -pos.x),
+		vec3(-pos.z, -pos.y,  pos.x),
+		vec3( pos.x,  pos.z,  pos.y),
+		vec3( pos.x, -pos.z, -pos.y),
+		vec3( pos.x, -pos.y,  pos.z),
+		vec3(-pos.x, -pos.y, -pos.z)
+	};
+	vec3 normal = normalize(faces[gl_GlobalInvocationID.z]);
+
+    vec3 irradiance = vec3(0.0f);
+    vec3 up = vec3(0.0f, 1.0f, 0.0f);
+    vec3 right = normalize(cross(up, normal));
+    up = normalize(cross(normal, right));
+
+    // passed into texturelod, sample from the mip that matches the texel count of the irradiance texture
+    float mipLevel = countMips(textureSize(skyboxTex, 0)) - countMips(imageSize(outputTex));
+
+    const float sampleDelta = 0.025f;
+    float numSamples = 0.0f;
+
+    for(float phi = 0.0f; phi < PI * 2.0f; phi += sampleDelta) {
+        for(float theta = 0.0f; theta < PI * 0.5f; theta += sampleDelta) {
+            vec3 tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+            vec3 sampleDir = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal; 
+            irradiance += textureLod(skyboxTex, sampleDir, mipLevel).rgb * cos(theta) * sin(theta);
+            numSamples++;
+        }
+    }
+
+    imageStore(outputTex, ivec3(gl_GlobalInvocationID), vec4(irradiance * PI / numSamples, 1.0f));
+}

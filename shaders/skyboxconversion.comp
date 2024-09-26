@@ -1,0 +1,27 @@
+#version 460 core
+#extension GL_ARB_bindless_texture : require
+
+#define INVPI 0.318309f
+
+layout(bindless_sampler) uniform sampler2D equirectangularMap;
+
+layout(r11f_g11f_b10f, binding = 2) restrict writeonly uniform imageCube outputTex;
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main() {
+	vec3 pos = 2.0f * vec3(gl_GlobalInvocationID.xy / vec2(imageSize(outputTex)), 1.0f) - 1.0f;
+	vec3 faces[6] = {
+		vec3( pos.z, -pos.y, -pos.x),
+		vec3(-pos.z, -pos.y,  pos.x),
+		vec3( pos.x,  pos.z,  pos.y),
+		vec3( pos.x, -pos.z, -pos.y),
+		vec3( pos.x, -pos.y,  pos.z),
+		vec3(-pos.x, -pos.y, -pos.z)
+	};
+	pos = normalize(faces[gl_GlobalInvocationID.z]);
+
+	vec2 uv = vec2(atan(pos.z, pos.x) * 0.5, asin(pos.y)) * INVPI + 0.5f;
+	uv.y = 1.0f - uv.y; // OpenGL has a flipped y axis compared to stbi
+	// hdr texture artists can NOT be trusted to keep their light levels in an acceptable range
+	imageStore(outputTex, ivec3(gl_GlobalInvocationID), clamp(textureLod(equirectangularMap, uv, 0), 0.0f, 100.0f));
+}

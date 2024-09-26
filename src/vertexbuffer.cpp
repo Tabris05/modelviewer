@@ -21,7 +21,7 @@ GLuint VertexBuffer::id() const {
 VertexBuffer VertexBuffer::make(const std::vector<Vertex>& vertices) {
 	GLuint id;
 	glCreateBuffers(1, &id);
-	if(vertices.size() > 0) glNamedBufferStorage(id, vertices.size() * sizeof(Vertex), vertices.data(), NULL);
+	if(vertices.size() > 0) glNamedBufferStorage(id, vertices.size() * sizeof(Vertex), vertices.data(), 0);
 	return VertexBuffer{ id };
 }
 

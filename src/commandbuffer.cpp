@@ -25,7 +25,7 @@ size_t CommandBuffer::numCommands() const {
 CommandBuffer CommandBuffer::make(const std::vector<DrawCommand>& cmds) {
 	GLuint id;
 	glCreateBuffers(1, &id);
-	if(cmds.size() > 0) glNamedBufferStorage(id, cmds.size() * sizeof(DrawCommand), cmds.data(), NULL);
+	if(cmds.size() > 0) glNamedBufferStorage(id, cmds.size() * sizeof(DrawCommand), cmds.data(), 0);
 	return CommandBuffer{ id, cmds.size()};
 }
 

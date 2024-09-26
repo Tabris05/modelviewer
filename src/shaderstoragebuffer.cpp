@@ -30,4 +30,4 @@ ShaderStorageBuffer::~ShaderStorageBuffer() {
 	if (m_rc.count() == 0) glDeleteBuffers(1, &m_id);
 }
 
-ShaderStorageBuffer::ShaderStorageBuffer(GLuint id) :m_id{ id } {}
+ShaderStorageBuffer::ShaderStorageBuffer(GLuint id) : m_id{ id } {}

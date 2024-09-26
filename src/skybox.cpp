@@ -1,6 +1,6 @@
 #include "skybox.h"
 #include "framebuffer.h"
-#include "shader.h"
+#include "computeshader.h"
 #include <stb/stb_image.h>
 #include <utility>
 #include <glm/glm.hpp>
@@ -29,42 +29,25 @@ Skybox Skybox::make() {
     return Skybox{ Texture::makeCube(1, 1), Texture::makeCube(1, 1), Texture::makeCube(1, 1), 0 };
 }
 
-// this should probably be done in compute but its less math for me this way
 Skybox Skybox::make(const std::filesystem::path& path) {
-    const static glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-    const static glm::mat4 views[] = {
-        glm::lookAt(glm::vec3{ 0.0f }, glm::vec3{ 1.0f, 0.0f, 0.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f }),
-        glm::lookAt(glm::vec3{ 0.0f }, glm::vec3{ -1.0f, 0.0f, 0.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f }),
-        glm::lookAt(glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 1.0f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 1.0f }),
-        glm::lookAt(glm::vec3{ 0.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f }, glm::vec3{ 0.0f, 0.0f, -1.0f }),
-        glm::lookAt(glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 0.0f, 1.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f }),
-        glm::lookAt(glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 0.0f, -1.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f })
-    };
-
 	int width, height, nrChannels;
 	float* data = stbi_loadf(path.string().c_str(), &width, &height, &nrChannels, 0);
 	Texture equirectangular = Texture::make2D(width, height, GL_R11F_G11F_B10F, data, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
 	stbi_image_free(data);
-
-    FrameBuffer captureBuffer = FrameBuffer::make();
-    captureBuffer.bind();
     
     // render equirectangular map to cubemap faces
     int cubemapSize = height / 2;
     Texture skyboxTex = Texture::makeCube(cubemapSize, cubemapSize, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
-    captureBuffer.attachTexture(skyboxTex, GL_COLOR_ATTACHMENT0);
 
-    Shader skyboxConversionShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxconversion.frag");
+    ComputeShader skyboxConversionShader = ComputeShader::make("shaders/skyboxconversion.comp");
     skyboxConversionShader.setUniform("equirectangularMap", equirectangular.handle());
-
     skyboxConversionShader.bind();
-    glViewport(0, 0, cubemapSize, cubemapSize);
-    for (int i = 0; i < 6; i++) {
-        skyboxConversionShader.setUniform("camMatrix", projection * views[i]);
-        skyboxConversionShader.setUniform("layer", i);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
 
+    skyboxTex.bindImage(2, GL_WRITE_ONLY, 0);
+    skyboxConversionShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, width, height, 6);
+
+    // the texture class doesn't provide an abstraction for copying texture data nor for deferring mipmap generation
+    // this is a pathological case, so I'm opting to simply forgo the abstraction rather than trying to shoehorn in logic that will never be needed anywhere else
     GLuint skyboxMipMapID;
     glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &skyboxMipMapID);
     glTextureParameteri(skyboxMipMapID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -78,46 +61,38 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     GLuint64 skyboxMipMapHandle = glGetTextureHandleARB(skyboxMipMapID);
     glMakeTextureHandleResidentARB(skyboxMipMapHandle);
 
-    // convolute skybox cubemap to create irradiance map (diffuse ibl)
+    // convolve skybox cubemap to create irradiance map (diffuse ibl)
     static constexpr int irradianceMapSize = 32;
     Texture irradianceTex = Texture::makeCube(irradianceMapSize, irradianceMapSize, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR, GL_LINEAR);
-    captureBuffer.attachTexture(irradianceTex, GL_COLOR_ATTACHMENT0);
-
-    Shader skyboxConvolutionShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxconvolution.frag");
+    
+    ComputeShader skyboxConvolutionShader = ComputeShader::make("shaders/skyboxconvolution.comp");
     skyboxConvolutionShader.setUniform("skyboxTex", skyboxMipMapHandle);
-
     skyboxConvolutionShader.bind();
-    glViewport(0, 0, irradianceMapSize, irradianceMapSize);
-    for (int i = 0; i < 6; i++) {
-        skyboxConvolutionShader.setUniform("camMatrix", projection * views[i]);
-        skyboxConvolutionShader.setUniform("layer", i);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
 
-    // convolute skybox cubemap to create mip chain of environment maps (specular ibl)
+    irradianceTex.bindImage(2, GL_WRITE_ONLY, 0);
+    skyboxConvolutionShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, irradianceMapSize, irradianceMapSize, 6);
+
+    // convolve skybox cubemap to create mip chain of environment maps (specular ibl)
     static constexpr int envMapSize = 512;
     const int numMipLevels = std::log2(envMapSize) + 1;
     Texture envMapTex = Texture::makeCube(envMapSize, envMapSize, GL_R11F_G11F_B10F, nullptr, GL_RGB, GL_FLOAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
-    Shader skyboxPrefilterShader = Shader::make("shaders/skyboxpreprocess.vert", "shaders/skyboxprefilter.frag");
+    ComputeShader skyboxPrefilterShader = ComputeShader::make("shaders/skyboxprefilter.comp");
     skyboxPrefilterShader.setUniform("skyboxTex", skyboxMipMapHandle);
     skyboxPrefilterShader.setUniform("resolution", static_cast<float>(cubemapSize));
+    skyboxPrefilterShader.bind();
 
     int curMipSize = envMapSize;
-    skyboxPrefilterShader.bind();
+    // unfortunately we cannot do all mip levels in a single dispatch
+    // since there is no way to bind a variable amount of images of variable sizes to a shader
     for (int mip = 0; mip < numMipLevels; mip++) {
         glViewport(0, 0, curMipSize, curMipSize);
-        captureBuffer.attachTexture(envMapTex, GL_COLOR_ATTACHMENT0, mip);
+        envMapTex.bindImage(2, GL_WRITE_ONLY, mip);
         skyboxPrefilterShader.setUniform("roughness", mip / static_cast<float>(numMipLevels - 1));
-        for (int i = 0; i < 6; i++) {
-            skyboxPrefilterShader.setUniform("camMatrix", projection * views[i]);
-            skyboxPrefilterShader.setUniform("layer", i);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        skyboxConvolutionShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, curMipSize, curMipSize, 6);
         curMipSize /= 2;
     }
 
-    captureBuffer.detachTexture(GL_COLOR_ATTACHMENT0, numMipLevels - 1);
     glMakeTextureHandleNonResidentARB(skyboxMipMapHandle);
     glDeleteTextures(1, &skyboxMipMapID);
 

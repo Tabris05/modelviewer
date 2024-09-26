@@ -53,7 +53,7 @@ Renderer Renderer::make() {
 	int width = mode->width * 3 / 4;
 	int height = mode->height * 3 / 4;
 
-	GLFWwindow* window = glfwCreateWindow(width, height, "Model Viewer", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(width, height, "Model Viewer", nullptr, nullptr);
 	glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(0);
@@ -168,6 +168,9 @@ Renderer Renderer::make() {
 }
 
 Renderer::~Renderer() {
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
 }

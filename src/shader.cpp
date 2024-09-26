@@ -183,5 +183,5 @@ Shader::Shader(GLuint id) : m_id{ id } {}
 
 std::string Shader::getShaderSource(const char* path) {
 	std::ifstream infile(path);
-	return std::string((std::istreambuf_iterator<char>(infile)), (std::istreambuf_iterator<char>()));
+	return std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
 }
