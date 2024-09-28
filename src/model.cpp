@@ -11,8 +11,18 @@
 #include "texture.h"
 #include "dbg.h"
 
-void Model::draw() {
-	if(m_cmdBuf.numCommands() > 0) glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_cmdBuf.numCommands(), 0);
+void Model::drawOpaque() {
+	if (m_opaqueCmdBuf.numCommands() > 0) {
+		m_opaqueCmdBuf.bind();
+		glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_opaqueCmdBuf.numCommands(), 0);
+	}
+}
+
+void Model::drawTransparent() {
+	if (m_transparentCmdBuf.numCommands() > 0) {
+		m_transparentCmdBuf.bind();
+		glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, NULL, m_transparentCmdBuf.numCommands(), 0);
+	}
 }
 
 AABB Model::aabb() const {
@@ -26,7 +36,8 @@ glm::mat4 Model::baseTransform() const {
 Model Model::make() {
 	std::unordered_map<size_t, Texture> textures;
 	ShaderStorageBuffer materialBuf = ShaderStorageBuffer::make();
-	CommandBuffer cmdBuf = CommandBuffer::make();
+	CommandBuffer opaqueCmds = CommandBuffer::make();
+	CommandBuffer transparentCmds = CommandBuffer::make();
 	VertexBuffer vBuf = VertexBuffer::make();
 	IndexBuffer iBuf = IndexBuffer::make();
 	VertexArray vArr = VertexArray::make();
@@ -38,7 +49,8 @@ Model Model::make() {
 	return Model{
 		std::move(textures),
 		std::move(materialBuf),
-		std::move(cmdBuf),
+		std::move(opaqueCmds),
+		std::move(transparentCmds),
 		std::move(vBuf),
 		std::move(iBuf),
 		std::move(vArr),
@@ -58,7 +70,8 @@ Model Model::make(const std::filesystem::path& path) {
 
 	std::unordered_map<size_t, Texture> textures;
 	std::vector<Material> materials;
-	std::vector<DrawCommand> cmds;
+	std::vector<DrawCommand> opaqueCmds;
+	std::vector<DrawCommand> transparentCmds;
 	std::vector<Vertex> vertices;
 	std::vector<GLuint> indices;
 
@@ -76,7 +89,8 @@ Model Model::make(const std::filesystem::path& path) {
 
 	textures.reserve(asset.textures.size());
 	materials.reserve(asset.materials.size());
-	cmds.reserve(numPrimitives);
+	opaqueCmds.reserve(numPrimitives);
+	transparentCmds.reserve(numPrimitives);
 	vertices.reserve(verticesSize);
 	indices.reserve(indicesSize);
 
@@ -292,7 +306,17 @@ Model Model::make(const std::filesystem::path& path) {
 					genTangSpaceDefault(&ctx);
 				}
 
-				cmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value_or(0));
+				if (curPrimitive.materialIndex.has_value()) {
+					if (asset.materials[curPrimitive.materialIndex.value()].alphaMode != fastgltf::AlphaMode::Blend) {
+						opaqueCmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value());
+					}
+					else {
+						transparentCmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value());
+					}
+				}
+				else {
+					opaqueCmds.emplace_back(indices.size() - oldIndicesSize, 1, oldIndicesSize, oldVerticesSize, curPrimitive.materialIndex.value());
+				}
 			}
 		}
 		for (size_t i : curNode.children) self(i, transform);
@@ -304,7 +328,8 @@ Model Model::make(const std::filesystem::path& path) {
 	}
 
 	ShaderStorageBuffer materialBuf = ShaderStorageBuffer::make(materials);
-	CommandBuffer cmdBuf = CommandBuffer::make(cmds);
+	CommandBuffer opaqueCmdBuf = CommandBuffer::make(opaqueCmds);
+	CommandBuffer transparentCmdBuf = CommandBuffer::make(transparentCmds);
 	VertexBuffer vBuf = VertexBuffer::make(vertices);
 	IndexBuffer iBuf = IndexBuffer::make(indices);
 	VertexArray vArr = VertexArray::make();
@@ -318,7 +343,6 @@ Model Model::make(const std::filesystem::path& path) {
 	vArr.linkAttribute(3, 2, GL_FLOAT, offsetof(Vertex, m_uv));
 	vArr.linkAttribute(4, 1, GL_FLOAT, offsetof(Vertex, m_tangentSign));
 	vArr.bind();
-	cmdBuf.bind();
 
 	glm::vec3 size = aabb.m_max - aabb.m_min;
 	float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
@@ -328,7 +352,8 @@ Model Model::make(const std::filesystem::path& path) {
 	return Model{ 
 		std::move(textures),
 		std::move(materialBuf),
-		std::move(cmdBuf),
+		std::move(opaqueCmdBuf),
+		std::move(transparentCmdBuf),
 		std::move(vBuf),
 		std::move(iBuf),
 		std::move(vArr),
@@ -340,7 +365,8 @@ Model Model::make(const std::filesystem::path& path) {
 Model::Model(
 	std::unordered_map<size_t, Texture> textures,
 	ShaderStorageBuffer materialBuf,
-	CommandBuffer cmdBuf,
+	CommandBuffer opaqueCmdBuf,
+	CommandBuffer transparentCmdBuf,
 	VertexBuffer vBuf,
 	IndexBuffer iBuf,
 	VertexArray vArr,
@@ -349,7 +375,8 @@ Model::Model(
 ) :
 	m_textures{ std::move(textures) },
 	m_materialBuf{ std::move(materialBuf) },
-	m_cmdBuf{ std::move(cmdBuf) },
+	m_opaqueCmdBuf{ std::move(opaqueCmdBuf) },
+	m_transparentCmdBuf{ std::move(transparentCmdBuf) },
 	m_vBuf{ std::move(vBuf) },
 	m_iBuf{ std::move(iBuf) },
 	m_vArr{ std::move(vArr) },

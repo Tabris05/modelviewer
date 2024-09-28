@@ -63,7 +63,7 @@ layout(std430, binding = 1) readonly buffer PoissonDiskBuffer {
 	vec2 samples[];
 };
 
-out vec3 fCol;
+out vec4 fCol;
 
 float clampedDot(vec3 a, vec3 b) {
 	return max(dot(a, b), 0.0f);
@@ -194,7 +194,9 @@ void main() {
 
 	roughness = isotrophicNDFFilter(normal, roughness);
 
-	fCol = directionalLight(viewDir, normal, materialColor.rgb, metalness, roughness)
+	vec3 outputColor = directionalLight(viewDir, normal, materialColor.rgb, metalness, roughness)
 		 + ambientLight(viewDir, normal, materialColor.rgb, metalness, roughness, occlusion)
 		 + emissiveColor;
+	
+	fCol = vec4(outputColor, mat.baseColor.a);
 }

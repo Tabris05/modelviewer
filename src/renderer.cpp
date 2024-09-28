@@ -71,10 +71,10 @@ Renderer Renderer::make() {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
-	glEnable(GL_CULL_FACE);
 
 	glDepthFunc(GL_GEQUAL); // reverse z
 	glClearDepth(0.0f);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glCullFace(GL_BACK);
 
 	ImGui::CreateContext();
@@ -184,6 +184,7 @@ void Renderer::draw() {
 	glm::mat3 normalMatrix{ glm::transpose(glm::inverse(modelMatrix)) };
 
 	// depth pass
+	glEnable(GL_CULL_FACE);
 	glDepthMask(GL_TRUE);
 	glViewport(0, 0, m_width, m_height);
 	m_multisampledBuffer.bind();
@@ -191,7 +192,7 @@ void Renderer::draw() {
 	m_depthShader.bind();
 	m_depthShader.setUniform("camMatrix", camMatrix);
 	m_depthShader.setUniform("modelMatrix", modelMatrix);
-	m_model.draw();
+	m_model.drawOpaque();
 
 	// shadow pass
 	glViewport(0, 0, m_shadowmapResolution, m_shadowmapResolution);
@@ -201,9 +202,8 @@ void Renderer::draw() {
 	m_shadowShader.setUniform("camMatrix", lightMatrix);
 	m_shadowShader.setUniform("modelMatrix", modelMatrix);
 	m_shadowShader.setUniform("normalMatrix", normalMatrix);
-	m_model.draw();
+	m_model.drawOpaque();
 
-	
 	// color pass
 	glDepthMask(GL_FALSE);
 	glViewport(0, 0, m_width, m_height);
@@ -217,12 +217,20 @@ void Renderer::draw() {
 	m_modelShader.setUniform("lightAngle", m_lightAngle);
 	m_modelShader.setUniform("lightColor", m_lightColor);
 	m_modelShader.setUniform("lightIntensity", m_lightIntensity);
-	m_model.draw();
-	
+	m_model.drawOpaque();
+
 	// skybox pass
 	m_skyboxShader.bind();
 	m_skyboxShader.setUniform("camMatrix", camMatrixNoTranslation);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	// transparent pass
+	glEnable(GL_BLEND);
+	glDisable(GL_CULL_FACE);
+	m_modelShader.bind();
+	m_model.drawTransparent();
+	glDisable(GL_BLEND);
+
 	glTextureBarrier();
 
 	// resolve pass

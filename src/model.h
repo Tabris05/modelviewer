@@ -14,7 +14,8 @@
 
 class Model {
 	public:
-		void draw();
+		void drawOpaque();
+		void drawTransparent();
 		AABB aabb() const;
 		glm::mat4 baseTransform() const;
 
@@ -25,7 +26,8 @@ class Model {
 		Model(
 			std::unordered_map<size_t, Texture> textures,
 			ShaderStorageBuffer materialBuf,
-			CommandBuffer cmdBuf,
+			CommandBuffer opaqueCmdBuf,
+			CommandBuffer transparentCmdBuf,
 			VertexBuffer vBuf,
 			IndexBuffer iBuf,
 			VertexArray vArr,
@@ -39,7 +41,8 @@ class Model {
 		glm::mat4 m_baseTransform;
 		std::unordered_map<size_t, Texture> m_textures;
 		ShaderStorageBuffer m_materialBuf;
-		CommandBuffer m_cmdBuf;
+		CommandBuffer m_opaqueCmdBuf;
+		CommandBuffer m_transparentCmdBuf;
 		VertexBuffer m_vBuf;
 		IndexBuffer m_iBuf;
 		VertexArray m_vArr;
