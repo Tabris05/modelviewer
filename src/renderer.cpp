@@ -74,8 +74,9 @@ Renderer Renderer::make() {
 
 	glDepthFunc(GL_GEQUAL); // reverse z
 	glClearDepth(0.0f);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glCullFace(GL_BACK);
+	glViewport(0, 0, width, height);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -186,7 +187,6 @@ void Renderer::draw() {
 	// depth pass
 	glEnable(GL_CULL_FACE);
 	glDepthMask(GL_TRUE);
-	glViewport(0, 0, m_width, m_height);
 	m_multisampledBuffer.bind();
 	glClear(GL_DEPTH_BUFFER_BIT);
 	m_depthShader.bind();
@@ -203,6 +203,7 @@ void Renderer::draw() {
 	m_shadowShader.setUniform("modelMatrix", modelMatrix);
 	m_shadowShader.setUniform("normalMatrix", normalMatrix);
 	m_model.drawOpaque();
+	glViewport(0, 0, m_width, m_height);
 
 	// color pass
 	glDepthMask(GL_FALSE);

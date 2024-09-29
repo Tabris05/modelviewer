@@ -28,7 +28,7 @@ struct Material {
 	float m_metalness;
 	float m_roughness;
 	TextureBitfield m_textureBitfield;
-	GLuint64 _padding;
+	GLuint _padding[3];
 };
 
 #endif

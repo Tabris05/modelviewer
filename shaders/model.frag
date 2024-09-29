@@ -198,5 +198,5 @@ void main() {
 		 + ambientLight(viewDir, normal, materialColor.rgb, metalness, roughness, occlusion)
 		 + emissiveColor;
 	
-	fCol = vec4(outputColor, mat.baseColor.a);
+	fCol = vec4(outputColor, materialColor.a);
 }
