@@ -44,7 +44,7 @@ Skybox Skybox::make(const std::filesystem::path& path) {
     skyboxConversionShader.bind();
 
     skyboxTex.bindImage(2, GL_WRITE_ONLY, 0);
-    skyboxConversionShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, width, height, 6);
+    skyboxConversionShader.dispatch(GL_TEXTURE_FETCH_BARRIER_BIT, cubemapSize, cubemapSize, 6);
 
     // the texture class doesn't provide an abstraction for copying texture data nor for deferring mipmap generation
     // this is a pathological case, so I'm opting to simply forgo the abstraction rather than trying to shoehorn in logic that will never be needed anywhere else

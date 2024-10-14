@@ -1,10 +1,14 @@
 #version 460 core
+#extension GL_ARB_bindless_texture : require
+
 #define PI 3.141593f
 #define EPSILON 0.000001f
 
-uniform samplerCube skyboxTex;
+
 uniform float resolution;
 uniform float roughness;
+
+layout(bindless_sampler) uniform samplerCube skyboxTex;
 
 layout(r11f_g11f_b10f, binding = 2) restrict writeonly uniform imageCube outputTex;
 

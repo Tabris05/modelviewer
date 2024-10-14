@@ -10,7 +10,7 @@ GLuint64 Texture::handle() const {
 }
 
 void Texture::bindImage(GLuint binding, GLenum access, GLint mip) const {
-	glBindImageTexture(binding, m_id, mip, GL_FALSE, 0, access, m_internalFormat);
+	glBindImageTexture(binding, m_id, mip, GL_TRUE, 0, access, m_internalFormat);
 }
 
 Texture Texture::make2D(
